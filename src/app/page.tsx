@@ -111,7 +111,7 @@ export default function Home() {
           </div>
           <div className="glass relative overflow-hidden rounded-3xl p-8">
             <div className="absolute right-6 top-6 h-28 w-28 rounded-full border border-mist/40" />
-            <div className="absolute bottom-6 left-6 h-36 w-36 rounded-3xl border border-mist/30" />
+            <div className="absolute -bottom-6 -left-6 h-28 w-28 rounded-3xl border border-mist/30 opacity-40" />
             <div className="space-y-6">
               <h2 className="font-[var(--font-display)] text-3xl">
                 Consulta con direccion y seguimiento constante
