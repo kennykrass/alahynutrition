@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const stats = [
   { label: "Planes personalizados", value: "+120" },
   { label: "Pacientes en seguimiento", value: "36" },
@@ -121,16 +123,42 @@ export default function Home() {
             </div>
           </div>
           <div className="glass relative overflow-hidden rounded-3xl p-8">
-            <div className="absolute right-6 top-6 h-28 w-28 rounded-full border border-mist/40" />
             <div className="absolute -bottom-6 -left-6 h-28 w-28 rounded-3xl border border-mist/30 opacity-40" />
             <div className="space-y-6">
-              <h2 className="font-[var(--font-display)] text-3xl">
-                Consulta con direccion y seguimiento constante
-              </h2>
-              <p className="text-[color:var(--text-soft)]">
-                Tu plan es flexible, medible y hecho con datos reales para que
-                puedas sostener resultados en el tiempo.
-              </p>
+              <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-start">
+                <div className="space-y-4">
+                  <h2 className="font-[var(--font-display)] text-3xl">
+                    Consulta con direccion y seguimiento constante
+                  </h2>
+                  <p className="text-[color:var(--text-soft)]">
+                    Tu plan es flexible, medible y hecho con datos reales para que
+                    puedas sostener resultados en el tiempo.
+                  </p>
+                </div>
+                <div className="relative mx-auto w-full max-w-[220px]">
+                  <div className="absolute inset-0 rounded-[2rem] bg-glow/20 blur-2xl" />
+                  <div className="glass relative overflow-hidden rounded-[2rem] border border-mist/30 p-2">
+                    <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
+                      <Image
+                        alt="Erick David Alahy Rios Cervantes"
+                        className="object-cover object-center"
+                        fill
+                        priority
+                        sizes="(max-width: 768px) 220px, 240px"
+                        src="/erick-alahy.jpg"
+                      />
+                    </div>
+                    <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-ink/75 px-4 py-3 backdrop-blur-sm">
+                      <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+                        Erick David Alahy Rios Cervantes
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-white">
+                        Nutricion clinica y deportiva
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="space-y-4">
                 <div className="rounded-2xl border border-mist/30 p-4">
                   <div className="text-sm uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
