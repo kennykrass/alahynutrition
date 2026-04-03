@@ -151,7 +151,7 @@ export default function Home() {
                   </div>
                   <div className="mt-4 text-center">
                     <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
-                      Erick David Alahy Rios Cervantes
+                      Lic en Nutricion David Rios
                     </div>
                     <div className="mt-1 text-sm font-medium text-white">
                       Nutricion clinica y deportiva
