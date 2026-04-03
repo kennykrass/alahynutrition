@@ -148,13 +148,13 @@ export default function Home() {
                         src="/erick-alahy.jpg"
                       />
                     </div>
-                    <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-ink/75 px-4 py-3 backdrop-blur-sm">
-                      <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
-                        Erick David Alahy Rios Cervantes
-                      </div>
-                      <div className="mt-1 text-sm font-medium text-white">
-                        Nutricion clinica y deportiva
-                      </div>
+                  </div>
+                  <div className="mt-4 text-center">
+                    <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+                      Erick David Alahy Rios Cervantes
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-white">
+                      Nutricion clinica y deportiva
                     </div>
                   </div>
                 </div>
