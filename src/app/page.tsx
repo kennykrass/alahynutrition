@@ -44,6 +44,9 @@ const expectations = [
   "Historial de consultas y recomendaciones"
 ];
 
+const whatsappHref =
+  "https://wa.me/528113282818?text=Hola%2C%20quiero%20informacion%20sobre%20una%20consulta%20en%20Alahy%20Nutrition";
+
 export default function Home() {
   return (
     <main>
@@ -89,12 +92,20 @@ export default function Home() {
               tecnologia para acompanarte en cada etapa de tu progreso.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="rounded-full bg-glow px-6 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]">
+              <a
+                className="rounded-full bg-glow px-6 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                href={whatsappHref}
+                rel="noreferrer"
+                target="_blank"
+              >
                 Agenda tu consulta
-              </button>
-              <button className="rounded-full border border-mist/40 px-6 py-3 text-sm font-semibold text-white transition hover:border-white">
+              </a>
+              <a
+                className="rounded-full border border-mist/40 px-6 py-3 text-sm font-semibold text-white transition hover:border-white"
+                href="#servicios"
+              >
                 Ver planes
-              </button>
+              </a>
             </div>
             <div className="grid gap-6 sm:grid-cols-3">
               {stats.map((stat) => (
@@ -257,16 +268,28 @@ export default function Home() {
               </div>
               <div>
                 <div className="text-xs uppercase tracking-[0.3em]">Telefono</div>
-                <div className="mt-2 text-lg text-white">81 1328 2818</div>
+                <a
+                  className="mt-2 inline-block text-lg text-white transition hover:text-glow"
+                  href="https://wa.me/528113282818"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  81 1328 2818
+                </a>
               </div>
               <div>
                 <div className="text-xs uppercase tracking-[0.3em]">Ubicacion</div>
                 <div className="mt-2 text-lg text-white">Consultas en linea y presenciales</div>
               </div>
             </div>
-            <button className="mt-6 w-full rounded-2xl bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow">
+            <a
+              className="mt-6 block w-full rounded-2xl bg-glow px-4 py-3 text-center text-sm font-semibold text-ink shadow-glow"
+              href={whatsappHref}
+              rel="noreferrer"
+              target="_blank"
+            >
               Solicitar informacion
-            </button>
+            </a>
           </div>
         </div>
       </section>
