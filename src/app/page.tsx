@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 
 const stats = [
@@ -76,6 +77,9 @@ export default function Home() {
             <a className="transition hover:text-white" href="#contacto">
               Contacto
             </a>
+            <Link className="transition hover:text-white" href="/login">
+              Portal
+            </Link>
           </nav>
         </div>
       </header>
@@ -108,6 +112,12 @@ export default function Home() {
               >
                 Ver planes
               </a>
+              <Link
+                className="rounded-full border border-mist/40 px-6 py-3 text-sm font-semibold text-white transition hover:border-white"
+                href="/register"
+              >
+                Registro de pacientes
+              </Link>
             </div>
             <div className="grid gap-6 sm:grid-cols-3">
               {stats.map((stat) => (
