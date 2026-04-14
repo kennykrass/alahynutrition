@@ -59,12 +59,23 @@ export default function Home() {
         <div className="absolute bottom-0 left-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-metal/20 blur-3xl" />
       </div>
 
-      <header className="px-6 pt-8 md:px-12">
-        <div className="glass stripe mx-auto flex max-w-6xl items-center justify-between rounded-full px-6 py-3">
-          <div className="font-[var(--font-display)] text-xl tracking-wide">
-            Alahy Nutrition
-          </div>
-          <nav className="hidden gap-6 text-sm text-[color:var(--text-soft)] md:flex">
+      <header className="px-6 pt-4 md:px-12">
+        <div className="mx-auto flex max-w-6xl items-start justify-between px-1 pb-0">
+          <Link
+            aria-label="Ir al inicio de Alahy Nutrition"
+            className="relative h-40 w-44 shrink-0 transition md:h-52 md:w-60"
+            href="/"
+          >
+            <Image
+              alt="Logo de Alahy Nutrition"
+              className="object-contain object-left"
+              fill
+              priority
+              sizes="(max-width: 768px) 176px, 240px"
+              src="/logoalat.png"
+            />
+          </Link>
+          <nav className="hidden gap-6 pt-0 text-sm text-[color:var(--text-soft)] md:flex">
             <a className="transition hover:text-white" href="#servicios">
               Servicios
             </a>
@@ -84,9 +95,9 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="px-6 pb-16 pt-14 md:px-12">
-        <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-8">
+      <section className="px-6 pb-16 pt-2 md:px-12">
+        <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-[1.1fr_0.9fr] md:items-start">
+          <div className="space-y-6">
             <div className="glass inline-flex items-center gap-3 rounded-full px-4 py-2 text-xs uppercase tracking-[0.3em] text-[color:var(--text-soft)]">
               Nutricion clinica y deportiva
             </div>
@@ -132,7 +143,7 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div className="glass relative overflow-hidden rounded-3xl p-8">
+          <div className="glass relative overflow-hidden rounded-3xl p-8 md:-mt-28">
             <div className="absolute -bottom-6 -left-6 h-28 w-28 rounded-3xl border border-mist/30 opacity-40" />
             <div className="space-y-6">
               <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-start">
