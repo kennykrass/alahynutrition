@@ -346,7 +346,17 @@ export default function Home() {
       <footer className="px-6 pb-10 md:px-12">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-mist/20 pt-6 text-xs text-[color:var(--text-soft)]">
           <div>Alahy Nutrition</div>
-          <div>Erick David Alahy Rios Cervantes</div>
+          <div className="text-white">
+            Powered by{" "}
+            <a
+              className="font-semibold text-glow transition hover:text-white"
+              href="https://kennykrass.com"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Kennykrass
+            </a>
+          </div>
           <div>Nutricion personalizada</div>
         </div>
       </footer>
