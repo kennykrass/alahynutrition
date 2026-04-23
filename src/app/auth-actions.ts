@@ -38,7 +38,7 @@ export async function registerAction(formData: FormData) {
     });
 
     if (!result.success) {
-      redirectWithError(
+      return redirectWithError(
         "/register",
         result.error.issues[0]?.message ?? "No pudimos crear la cuenta."
       );
@@ -89,7 +89,7 @@ export async function loginAction(formData: FormData) {
     });
 
     if (!result.success) {
-      redirectWithError(
+      return redirectWithError(
         "/login",
         result.error.issues[0]?.message ?? "No pudimos iniciar sesion."
       );
