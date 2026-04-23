@@ -102,7 +102,7 @@ export async function loginAction(formData: FormData) {
     });
 
     if (!user) {
-      redirectWithError("/login", "Correo o contrasena incorrectos.");
+      return redirectWithError("/login", "Correo o contrasena incorrectos.");
     }
 
     const isValidPassword = await bcrypt.compare(parsed.password, user.passwordHash);
