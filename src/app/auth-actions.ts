@@ -31,33 +31,35 @@ function handleAuthActionError(path: "/register" | "/login", error: unknown): ne
 
 export async function registerAction(formData: FormData) {
   try {
-    const parsed = registerSchema.safeParse({
+    const result = registerSchema.safeParse({
       fullName: getField(formData, "fullName"),
       email: getField(formData, "email"),
       password: getField(formData, "password")
     });
 
-    if (!parsed.success) {
+    if (!result.success) {
       redirectWithError(
         "/register",
-        parsed.error.issues[0]?.message ?? "No pudimos crear la cuenta."
+        result.error.issues[0]?.message ?? "No pudimos crear la cuenta."
       );
     }
 
+    const parsed = result.data;
+
     const existingUser = await prisma.user.findUnique({
-      where: { email: parsed.data.email }
+      where: { email: parsed.email }
     });
 
     if (existingUser) {
       redirectWithError("/register", "Ya existe una cuenta con ese correo.");
     }
 
-    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+    const passwordHash = await bcrypt.hash(parsed.password, 12);
 
     const user = await prisma.user.create({
       data: {
-        fullName: parsed.data.fullName,
-        email: parsed.data.email,
+        fullName: parsed.fullName,
+        email: parsed.email,
         passwordHash,
         role: UserRole.PATIENT,
         profile: {
@@ -81,27 +83,29 @@ export async function registerAction(formData: FormData) {
 
 export async function loginAction(formData: FormData) {
   try {
-    const parsed = loginSchema.safeParse({
+    const result = loginSchema.safeParse({
       email: getField(formData, "email"),
       password: getField(formData, "password")
     });
 
-    if (!parsed.success) {
+    if (!result.success) {
       redirectWithError(
         "/login",
-        parsed.error.issues[0]?.message ?? "No pudimos iniciar sesion."
+        result.error.issues[0]?.message ?? "No pudimos iniciar sesion."
       );
     }
 
+    const parsed = result.data;
+
     const user = await prisma.user.findUnique({
-      where: { email: parsed.data.email }
+      where: { email: parsed.email }
     });
 
     if (!user) {
       redirectWithError("/login", "Correo o contrasena incorrectos.");
     }
 
-    const isValidPassword = await bcrypt.compare(parsed.data.password, user.passwordHash);
+    const isValidPassword = await bcrypt.compare(parsed.password, user.passwordHash);
 
     if (!isValidPassword) {
       redirectWithError("/login", "Correo o contrasena incorrectos.");
