@@ -13,11 +13,20 @@ import {
   getDefaultDashboardPath,
   requireRole
 } from "@/lib/session";
-import { loginSchema, registerSchema } from "@/lib/validations";
+import {
+  adminPatientUpdateSchema,
+  loginSchema,
+  registerSchema
+} from "@/lib/validations";
 
 function getField(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function getOptionalField(formData: FormData, key: string) {
+  const value = getField(formData, key).trim();
+  return value ? value : undefined;
 }
 
 function redirectWithError(path: "/register" | "/login", message: string) {
@@ -38,6 +47,15 @@ function handleAuthActionError(path: "/register" | "/login", error: unknown): ne
 
 function resolveUserRole(email: string) {
   return getAdminEmails().includes(email.toLowerCase()) ? UserRole.ADMIN : UserRole.PATIENT;
+}
+
+function parseOptionalFloat(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
 export async function registerAction(formData: FormData) {
@@ -183,4 +201,120 @@ export async function deletePatientAction(formData: FormData) {
 
   revalidatePath("/admin");
   redirect("/admin?success=Paciente%20eliminado%20correctamente.");
+}
+
+export async function updatePatientAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const result = adminPatientUpdateSchema.safeParse({
+    userId: getField(formData, "userId"),
+    fullName: getField(formData, "fullName"),
+    email: getField(formData, "email"),
+    phone: getOptionalField(formData, "phone"),
+    birthDate: getOptionalField(formData, "birthDate"),
+    heightCm: getOptionalField(formData, "heightCm"),
+    initialWeightKg: getOptionalField(formData, "initialWeightKg"),
+    goal: getOptionalField(formData, "goal"),
+    notes: getOptionalField(formData, "notes")
+  });
+
+  if (!result.success) {
+    redirect(
+      `/admin/patients/${encodeURIComponent(getField(formData, "userId"))}?error=${encodeURIComponent(
+        result.error.issues[0]?.message ?? "No pudimos actualizar al paciente."
+      )}`
+    );
+  }
+
+  const parsed = result.data;
+
+  if (resolveUserRole(parsed.email) === UserRole.ADMIN) {
+    redirect(
+      `/admin/patients/${encodeURIComponent(parsed.userId)}?error=${encodeURIComponent(
+        "Ese correo pertenece a un administrador configurado en ADMIN_EMAILS."
+      )}`
+    );
+  }
+
+  const heightCm = parseOptionalFloat(parsed.heightCm);
+  const initialWeightKg = parseOptionalFloat(parsed.initialWeightKg);
+
+  if (Number.isNaN(heightCm) || Number.isNaN(initialWeightKg)) {
+    redirect(
+      `/admin/patients/${encodeURIComponent(parsed.userId)}?error=${encodeURIComponent(
+        "Altura y peso inicial deben ser numeros validos."
+      )}`
+    );
+  }
+
+  const birthDate = parsed.birthDate ? new Date(`${parsed.birthDate}T00:00:00`) : undefined;
+
+  if (birthDate && Number.isNaN(birthDate.getTime())) {
+    redirect(
+      `/admin/patients/${encodeURIComponent(parsed.userId)}?error=${encodeURIComponent(
+        "La fecha de nacimiento no es valida."
+      )}`
+    );
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { id: parsed.userId },
+    select: {
+      id: true,
+      role: true
+    }
+  });
+
+  if (!existingUser) {
+    redirect("/admin?error=El%20paciente%20que%20quieres%20editar%20ya%20no%20existe.");
+  }
+
+  if (existingUser.role !== UserRole.PATIENT) {
+    redirect("/admin?error=Solo%20puedes%20editar%20cuentas%20de%20paciente.");
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: parsed.userId },
+      data: {
+        fullName: parsed.fullName,
+        email: parsed.email,
+        profile: {
+          upsert: {
+            create: {
+              phone: parsed.phone,
+              birthDate,
+              heightCm,
+              initialWeightKg,
+              goal: parsed.goal,
+              notes: parsed.notes
+            },
+            update: {
+              phone: parsed.phone,
+              birthDate,
+              heightCm,
+              initialWeightKg,
+              goal: parsed.goal,
+              notes: parsed.notes
+            }
+          }
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      redirect(
+        `/admin/patients/${encodeURIComponent(parsed.userId)}?error=${encodeURIComponent(
+          "Ya existe otro usuario con ese correo."
+        )}`
+      );
+    }
+
+    throw error;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/patients/${parsed.userId}`);
+  revalidatePath("/patient");
+  redirect(`/admin/patients/${encodeURIComponent(parsed.userId)}?success=Paciente%20actualizado%20correctamente.`);
 }

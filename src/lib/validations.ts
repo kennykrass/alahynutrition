@@ -16,5 +16,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Escribe tu contrasena.")
 });
 
+export const adminPatientUpdateSchema = z.object({
+  userId: z.string().trim().min(1, "No pudimos identificar al paciente."),
+  fullName: z.string().trim().min(3, "Escribe el nombre completo del paciente."),
+  email: z.email("Escribe un correo valido.").transform((value) => value.toLowerCase()),
+  phone: z.string().trim().max(30, "El telefono es demasiado largo.").optional(),
+  birthDate: z.string().trim().optional(),
+  heightCm: z.string().trim().optional(),
+  initialWeightKg: z.string().trim().optional(),
+  goal: z.string().trim().max(200, "La meta es demasiado larga.").optional(),
+  notes: z.string().trim().max(1000, "Las notas son demasiado largas.").optional()
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type AdminPatientUpdateInput = z.infer<typeof adminPatientUpdateSchema>;

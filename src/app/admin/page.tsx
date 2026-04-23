@@ -185,15 +185,23 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                     </div>
 
                     {user.role === UserRole.PATIENT ? (
-                      <form action={deletePatientAction} className="mt-5">
-                        <input name="userId" type="hidden" value={user.id} />
-                        <button
-                          className="rounded-full border border-rose-400/30 px-4 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-300 hover:bg-rose-500/10"
-                          type="submit"
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <Link
+                          className="rounded-full border border-cyan-400/30 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-500/10"
+                          href={`/admin/patients/${user.id}`}
                         >
-                          Eliminar paciente
-                        </button>
-                      </form>
+                          Editar paciente
+                        </Link>
+                        <form action={deletePatientAction}>
+                          <input name="userId" type="hidden" value={user.id} />
+                          <button
+                            className="rounded-full border border-rose-400/30 px-4 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-300 hover:bg-rose-500/10"
+                            type="submit"
+                          >
+                            Eliminar paciente
+                          </button>
+                        </form>
+                      </div>
                     ) : null}
                   </article>
                 ))
