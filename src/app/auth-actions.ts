@@ -4,8 +4,9 @@ import { Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
+import { getAdminEmails } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { clearSession, createSession } from "@/lib/session";
+import { clearSession, createSession, getDefaultDashboardPath } from "@/lib/session";
 import { loginSchema, registerSchema } from "@/lib/validations";
 
 function getField(formData: FormData, key: string) {
@@ -27,6 +28,10 @@ function handleAuthActionError(path: "/register" | "/login", error: unknown): ne
   }
 
   throw error;
+}
+
+function resolveUserRole(email: string) {
+  return getAdminEmails().includes(email.toLowerCase()) ? UserRole.ADMIN : UserRole.PATIENT;
 }
 
 export async function registerAction(formData: FormData) {
@@ -61,7 +66,7 @@ export async function registerAction(formData: FormData) {
         fullName: parsed.fullName,
         email: parsed.email,
         passwordHash,
-        role: UserRole.PATIENT,
+        role: resolveUserRole(parsed.email),
         profile: {
           create: {}
         }
@@ -75,7 +80,7 @@ export async function registerAction(formData: FormData) {
       fullName: user.fullName
     });
 
-    redirect("/dashboard");
+    redirect(getDefaultDashboardPath(user.role));
   } catch (error) {
     handleAuthActionError("/register", error);
   }
@@ -111,14 +116,23 @@ export async function loginAction(formData: FormData) {
       redirectWithError("/login", "Correo o contrasena incorrectos.");
     }
 
+    const resolvedRole = resolveUserRole(user.email);
+    const currentUser =
+      user.role === resolvedRole
+        ? user
+        : await prisma.user.update({
+            where: { id: user.id },
+            data: { role: resolvedRole }
+          });
+
     await createSession({
-      sub: user.id,
-      role: user.role,
-      email: user.email,
-      fullName: user.fullName
+      sub: currentUser.id,
+      role: currentUser.role,
+      email: currentUser.email,
+      fullName: currentUser.fullName
     });
 
-    redirect("/dashboard");
+    redirect(getDefaultDashboardPath(currentUser.role));
   } catch (error) {
     handleAuthActionError("/login", error);
   }

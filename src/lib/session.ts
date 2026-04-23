@@ -15,6 +15,10 @@ type SessionPayload = {
   fullName: string;
 };
 
+export function getDefaultDashboardPath(role: UserRole) {
+  return role === UserRole.ADMIN ? "/admin" : "/patient";
+}
+
 export async function createSession(payload: SessionPayload) {
   const token = await new SignJWT({
     role: payload.role,
@@ -70,6 +74,16 @@ export async function requireUser() {
 
   if (!session) {
     redirect("/login");
+  }
+
+  return session;
+}
+
+export async function requireRole(role: UserRole) {
+  const session = await requireUser();
+
+  if (session.role !== role) {
+    redirect(getDefaultDashboardPath(session.role));
   }
 
   return session;

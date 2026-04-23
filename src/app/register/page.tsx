@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AuthCard } from "@/components/auth-card";
-import { getSession } from "@/lib/session";
+import { getDefaultDashboardPath, getSession } from "@/lib/session";
 import { registerAction } from "@/app/auth-actions";
 
 type RegisterPageProps = {
@@ -15,7 +15,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const session = await getSession();
 
   if (session) {
-    redirect("/dashboard");
+    redirect(getDefaultDashboardPath(session.role));
   }
 
   return (

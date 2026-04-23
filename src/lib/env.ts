@@ -15,3 +15,16 @@ export function getDatabaseUrl() {
 export function getSessionSecret() {
   return requireEnv("SESSION_SECRET");
 }
+
+export function getAdminEmails() {
+  const value = process.env.ADMIN_EMAILS;
+
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}

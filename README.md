@@ -29,6 +29,7 @@ La base del portal de pacientes ya incluye:
 2. Configura:
 - `DATABASE_URL`
 - `SESSION_SECRET`
+- `ADMIN_EMAILS` opcional, separado por comas
 
 ## Primer arranque con PostgreSQL
 1. Si quieres levantar PostgreSQL local con Docker:
@@ -49,6 +50,13 @@ La base del portal de pacientes ya incluye:
 ## Notas de la fase 2
 - Si falta `DATABASE_URL` o `SESSION_SECRET`, la app ahora lo indicara con un error claro
 - Si PostgreSQL no esta listo, el registro y login mostraran un mensaje de configuracion en lugar de romper la experiencia
+- Los correos incluidos en `ADMIN_EMAILS` entran con rol `ADMIN`; el resto conserva rol `PATIENT`
+
+## Roles
+- `/dashboard` ahora redirige segun rol
+- `/patient` requiere rol `PATIENT`
+- `/admin` requiere rol `ADMIN`
+- Si un usuario ya existe y luego agregas su correo a `ADMIN_EMAILS`, el rol se sincroniza en su siguiente login
 
 ## Rutas nuevas
 - `/register`
