@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: alahy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: alahy_nutrition
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - alahy_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  alahy_postgres_data:

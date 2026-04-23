@@ -3,6 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getSessionSecret } from "@/lib/env";
+
 const SESSION_COOKIE = "alahy_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
 
@@ -12,16 +14,6 @@ type SessionPayload = {
   email: string;
   fullName: string;
 };
-
-function getSessionSecret() {
-  const secret = process.env.SESSION_SECRET;
-
-  if (!secret) {
-    throw new Error("SESSION_SECRET is not configured.");
-  }
-
-  return new TextEncoder().encode(secret);
-}
 
 export async function createSession(payload: SessionPayload) {
   const token = await new SignJWT({
@@ -33,7 +25,7 @@ export async function createSession(payload: SessionPayload) {
     .setSubject(payload.sub)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DURATION_SECONDS}s`)
-    .sign(getSessionSecret());
+    .sign(new TextEncoder().encode(getSessionSecret()));
 
   cookies().set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -56,7 +48,7 @@ export async function getSession() {
   }
 
   try {
-    const { payload } = await jwtVerify(token, getSessionSecret());
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(getSessionSecret()));
 
     if (!payload.sub || typeof payload.email !== "string" || typeof payload.fullName !== "string") {
       return null;

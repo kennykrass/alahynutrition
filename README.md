@@ -25,16 +25,30 @@ La base del portal de pacientes ya incluye:
 - Prisma con modelos `User`, `PatientProfile` y `ProgressEntry`
 
 ## Variables de entorno
-1. Copia `.env.example` a `.env`
+1. Copia `.env.example` a `.env.local` para desarrollo en Next.js
 2. Configura:
 - `DATABASE_URL`
 - `SESSION_SECRET`
 
 ## Primer arranque con PostgreSQL
-1. Crea una base llamada `alahy_nutrition` o ajusta el nombre en `DATABASE_URL`
-2. Ejecuta `npm run prisma:generate`
-3. Ejecuta `npm run prisma:migrate -- --name init`
-4. Ejecuta `npm run dev`
+1. Si quieres levantar PostgreSQL local con Docker:
+- Ejecuta `docker compose up -d`
+2. Si ya tienes PostgreSQL local o remoto:
+- Crea una base llamada `alahy_nutrition` o ajusta el nombre en `DATABASE_URL`
+3. Copia `.env.example` a `.env.local`
+4. Genera un secreto seguro para `SESSION_SECRET`
+5. Ejecuta `npm install`
+6. Ejecuta `npm run prisma:generate`
+7. Ejecuta `npm run prisma:migrate -- --name init`
+8. Ejecuta `npm run dev`
+
+## Conexion esperada
+- Local con Docker: `postgresql://postgres:postgres@localhost:5432/alahy_nutrition?schema=public`
+- Supabase/Neon/Railway: usa la cadena PostgreSQL que te entregue el proveedor
+
+## Notas de la fase 2
+- Si falta `DATABASE_URL` o `SESSION_SECRET`, la app ahora lo indicara con un error claro
+- Si PostgreSQL no esta listo, el registro y login mostraran un mensaje de configuracion en lugar de romper la experiencia
 
 ## Rutas nuevas
 - `/register`

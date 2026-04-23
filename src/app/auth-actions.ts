@@ -1,6 +1,6 @@
 "use server";
 
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
@@ -13,81 +13,111 @@ function getField(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function redirectWithError(path: "/register" | "/login", message: string) {
+  redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+function handleAuthActionError(path: "/register" | "/login", error: unknown): never {
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    redirectWithError(path, "La conexion con la base de datos no esta configurada todavia.");
+  }
+
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    redirectWithError(path, "Ya existe una cuenta con ese correo.");
+  }
+
+  throw error;
+}
+
 export async function registerAction(formData: FormData) {
-  const parsed = registerSchema.safeParse({
-    fullName: getField(formData, "fullName"),
-    email: getField(formData, "email"),
-    password: getField(formData, "password")
-  });
+  try {
+    const parsed = registerSchema.safeParse({
+      fullName: getField(formData, "fullName"),
+      email: getField(formData, "email"),
+      password: getField(formData, "password")
+    });
 
-  if (!parsed.success) {
-    redirect(`/register?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "No pudimos crear la cuenta.")}`);
-  }
-
-  const existingUser = await prisma.user.findUnique({
-    where: { email: parsed.data.email }
-  });
-
-  if (existingUser) {
-    redirect("/register?error=Ya%20existe%20una%20cuenta%20con%20ese%20correo.");
-  }
-
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-
-  const user = await prisma.user.create({
-    data: {
-      fullName: parsed.data.fullName,
-      email: parsed.data.email,
-      passwordHash,
-      role: UserRole.PATIENT,
-      profile: {
-        create: {}
-      }
+    if (!parsed.success) {
+      redirectWithError(
+        "/register",
+        parsed.error.issues[0]?.message ?? "No pudimos crear la cuenta."
+      );
     }
-  });
 
-  await createSession({
-    sub: user.id,
-    role: user.role,
-    email: user.email,
-    fullName: user.fullName
-  });
+    const existingUser = await prisma.user.findUnique({
+      where: { email: parsed.data.email }
+    });
 
-  redirect("/dashboard");
+    if (existingUser) {
+      redirectWithError("/register", "Ya existe una cuenta con ese correo.");
+    }
+
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        fullName: parsed.data.fullName,
+        email: parsed.data.email,
+        passwordHash,
+        role: UserRole.PATIENT,
+        profile: {
+          create: {}
+        }
+      }
+    });
+
+    await createSession({
+      sub: user.id,
+      role: user.role,
+      email: user.email,
+      fullName: user.fullName
+    });
+
+    redirect("/dashboard");
+  } catch (error) {
+    handleAuthActionError("/register", error);
+  }
 }
 
 export async function loginAction(formData: FormData) {
-  const parsed = loginSchema.safeParse({
-    email: getField(formData, "email"),
-    password: getField(formData, "password")
-  });
+  try {
+    const parsed = loginSchema.safeParse({
+      email: getField(formData, "email"),
+      password: getField(formData, "password")
+    });
 
-  if (!parsed.success) {
-    redirect(`/login?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "No pudimos iniciar sesion.")}`);
+    if (!parsed.success) {
+      redirectWithError(
+        "/login",
+        parsed.error.issues[0]?.message ?? "No pudimos iniciar sesion."
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: parsed.data.email }
+    });
+
+    if (!user) {
+      redirectWithError("/login", "Correo o contrasena incorrectos.");
+    }
+
+    const isValidPassword = await bcrypt.compare(parsed.data.password, user.passwordHash);
+
+    if (!isValidPassword) {
+      redirectWithError("/login", "Correo o contrasena incorrectos.");
+    }
+
+    await createSession({
+      sub: user.id,
+      role: user.role,
+      email: user.email,
+      fullName: user.fullName
+    });
+
+    redirect("/dashboard");
+  } catch (error) {
+    handleAuthActionError("/login", error);
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email: parsed.data.email }
-  });
-
-  if (!user) {
-    redirect("/login?error=Correo%20o%20contrasena%20incorrectos.");
-  }
-
-  const isValidPassword = await bcrypt.compare(parsed.data.password, user.passwordHash);
-
-  if (!isValidPassword) {
-    redirect("/login?error=Correo%20o%20contrasena%20incorrectos.");
-  }
-
-  await createSession({
-    sub: user.id,
-    role: user.role,
-    email: user.email,
-    fullName: user.fullName
-  });
-
-  redirect("/dashboard");
 }
 
 export async function logoutAction() {
