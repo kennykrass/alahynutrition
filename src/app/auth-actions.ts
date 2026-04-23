@@ -2,11 +2,17 @@
 
 import { Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAdminEmails } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { clearSession, createSession, getDefaultDashboardPath } from "@/lib/session";
+import {
+  clearSession,
+  createSession,
+  getDefaultDashboardPath,
+  requireRole
+} from "@/lib/session";
 import { loginSchema, registerSchema } from "@/lib/validations";
 
 function getField(formData: FormData, key: string) {
@@ -141,4 +147,40 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   clearSession();
   redirect("/login");
+}
+
+export async function deletePatientAction(formData: FormData) {
+  const session = await requireRole(UserRole.ADMIN);
+  const userId = getField(formData, "userId");
+
+  if (!userId) {
+    redirect("/admin?error=No%20pudimos%20identificar%20al%20paciente.");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true
+    }
+  });
+
+  if (!user) {
+    redirect("/admin?error=El%20paciente%20ya%20no%20existe.");
+  }
+
+  if (user.id === session.userId) {
+    redirect("/admin?error=No%20puedes%20eliminar%20tu%20propia%20cuenta.");
+  }
+
+  if (user.role !== UserRole.PATIENT) {
+    redirect("/admin?error=Solo%20puedes%20eliminar%20cuentas%20de%20paciente.");
+  }
+
+  await prisma.user.delete({
+    where: { id: user.id }
+  });
+
+  revalidatePath("/admin");
+  redirect("/admin?success=Paciente%20eliminado%20correctamente.");
 }

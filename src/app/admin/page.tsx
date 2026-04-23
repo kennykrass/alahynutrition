@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
-import { logoutAction } from "@/app/auth-actions";
+import { deletePatientAction, logoutAction } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 
@@ -13,7 +13,14 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
-export default async function AdminDashboardPage() {
+type AdminDashboardPageProps = {
+  searchParams?: {
+    error?: string;
+    success?: string;
+  };
+};
+
+export default async function AdminDashboardPage({ searchParams }: AdminDashboardPageProps) {
   const session = await requireRole(UserRole.ADMIN);
 
   const [adminUser, users, totalUsers, totalPatients, totalEntries] = await Promise.all([
@@ -116,6 +123,18 @@ export default async function AdminDashboardPage() {
           </div>
         </section>
 
+        {searchParams?.success ? (
+          <div className="mt-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
+            {searchParams.success}
+          </div>
+        ) : null}
+
+        {searchParams?.error ? (
+          <div className="mt-8 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-100">
+            {searchParams.error}
+          </div>
+        ) : null}
+
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="glass rounded-3xl p-6">
             <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
@@ -164,6 +183,18 @@ export default async function AdminDashboardPage() {
                         {user.entries[0] ? formatDate(user.entries[0].loggedAt) : "Sin registros"}
                       </div>
                     </div>
+
+                    {user.role === UserRole.PATIENT ? (
+                      <form action={deletePatientAction} className="mt-5">
+                        <input name="userId" type="hidden" value={user.id} />
+                        <button
+                          className="rounded-full border border-rose-400/30 px-4 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-300 hover:bg-rose-500/10"
+                          type="submit"
+                        >
+                          Eliminar paciente
+                        </button>
+                      </form>
+                    ) : null}
                   </article>
                 ))
               ) : (
