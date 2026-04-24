@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
-import { deletePatientAction, logoutAction } from "@/app/auth-actions";
+import {
+  createPatientByAdminAction,
+  deletePatientAction,
+  logoutAction
+} from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 
@@ -148,6 +152,41 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
             <div className="mt-8 rounded-2xl border border-mist/20 p-4 text-sm text-[color:var(--text-soft)]">
               Para definir admins, agrega sus correos en `ADMIN_EMAILS` separados por coma en tu
               entorno local y en Vercel.
+            </div>
+
+            <div className="mt-8 rounded-2xl border border-mist/20 p-4">
+              <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+                Alta manual de paciente
+              </div>
+              <form action={createPatientByAdminAction} className="mt-4 grid gap-3">
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  name="fullName"
+                  placeholder="Nombre completo"
+                  required
+                  type="text"
+                />
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  name="email"
+                  placeholder="correo@ejemplo.com"
+                  required
+                  type="email"
+                />
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  name="password"
+                  placeholder="Contrasena temporal"
+                  required
+                  type="password"
+                />
+                <button
+                  className="rounded-full bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                  type="submit"
+                >
+                  Dar de alta paciente
+                </button>
+              </form>
             </div>
           </div>
 

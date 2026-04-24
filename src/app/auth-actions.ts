@@ -167,6 +167,53 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+export async function createPatientByAdminAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const result = registerSchema.safeParse({
+    fullName: getField(formData, "fullName"),
+    email: getField(formData, "email"),
+    password: getField(formData, "password")
+  });
+
+  if (!result.success) {
+    redirect(
+      `/admin?error=${encodeURIComponent(
+        result.error.issues[0]?.message ?? "No pudimos dar de alta al paciente."
+      )}`
+    );
+  }
+
+  const parsed = result.data;
+
+  if (resolveUserRole(parsed.email) === UserRole.ADMIN) {
+    redirect("/admin?error=Ese%20correo%20esta%20reservado%20como%20administrador.");
+  }
+
+  try {
+    await prisma.user.create({
+      data: {
+        fullName: parsed.fullName,
+        email: parsed.email,
+        passwordHash: await bcrypt.hash(parsed.password, 12),
+        role: UserRole.PATIENT,
+        profile: {
+          create: {}
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      redirect("/admin?error=Ya%20existe%20una%20cuenta%20con%20ese%20correo.");
+    }
+
+    throw error;
+  }
+
+  revalidatePath("/admin");
+  redirect("/admin?success=Paciente%20creado%20correctamente.");
+}
+
 export async function deletePatientAction(formData: FormData) {
   const session = await requireRole(UserRole.ADMIN);
   const userId = getField(formData, "userId");
