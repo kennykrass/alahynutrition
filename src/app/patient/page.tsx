@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { logoutAction } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { requireCompletedPasswordSetup, requireRole } from "@/lib/session";
 import { UserRole } from "@prisma/client";
 
 function formatDate(value: Date) {
@@ -14,6 +14,7 @@ function formatDate(value: Date) {
 }
 
 export default async function PatientDashboardPage() {
+  await requireCompletedPasswordSetup();
   const session = await requireRole(UserRole.PATIENT);
 
   const user = await prisma.user.findUnique({

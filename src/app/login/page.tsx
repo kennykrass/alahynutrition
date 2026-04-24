@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AuthCard } from "@/components/auth-card";
 import { loginAction } from "@/app/auth-actions";
-import { getDefaultDashboardPath, getSession } from "@/lib/session";
+import { getPostLoginPath, getSession } from "@/lib/session";
 
 type LoginPageProps = {
   searchParams?: {
@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getSession();
 
   if (session) {
-    redirect(getDefaultDashboardPath(session.role));
+    redirect(getPostLoginPath(session));
   }
 
   return (

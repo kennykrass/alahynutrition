@@ -16,6 +16,21 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Escribe tu contrasena.")
 });
 
+export const changePasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "La contrasena debe tener al menos 8 caracteres.")
+      .regex(/[A-Z]/, "Incluye al menos una letra mayuscula.")
+      .regex(/[a-z]/, "Incluye al menos una letra minuscula.")
+      .regex(/[0-9]/, "Incluye al menos un numero."),
+    confirmPassword: z.string().min(1, "Confirma tu nueva contrasena.")
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contrasenas no coinciden.",
+    path: ["confirmPassword"]
+  });
+
 export const adminPatientUpdateSchema = z.object({
   userId: z.string().trim().min(1, "No pudimos identificar al paciente."),
   fullName: z.string().trim().min(3, "Escribe el nombre completo del paciente."),
@@ -30,4 +45,5 @@ export const adminPatientUpdateSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type AdminPatientUpdateInput = z.infer<typeof adminPatientUpdateSchema>;

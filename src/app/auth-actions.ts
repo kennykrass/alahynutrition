@@ -11,10 +11,13 @@ import {
   clearSession,
   createSession,
   getDefaultDashboardPath,
+  getPostLoginPath,
+  requireUser,
   requireRole
 } from "@/lib/session";
 import {
   adminPatientUpdateSchema,
+  changePasswordSchema,
   loginSchema,
   registerSchema
 } from "@/lib/validations";
@@ -56,6 +59,18 @@ function parseOptionalFloat(value?: string) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function generateTemporaryPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const values = crypto.getRandomValues(new Uint32Array(10));
+  let raw = "";
+
+  for (const value of values) {
+    raw += alphabet[value % alphabet.length];
+  }
+
+  return `Alahy${raw}9`;
 }
 
 export async function registerAction(formData: FormData) {
@@ -101,10 +116,11 @@ export async function registerAction(formData: FormData) {
       sub: user.id,
       role: user.role,
       email: user.email,
-      fullName: user.fullName
+      fullName: user.fullName,
+      mustChangePassword: user.mustChangePassword
     });
 
-    redirect(getDefaultDashboardPath(user.role));
+    redirect(getPostLoginPath(user));
   } catch (error) {
     handleAuthActionError("/register", error);
   }
@@ -153,10 +169,11 @@ export async function loginAction(formData: FormData) {
       sub: currentUser.id,
       role: currentUser.role,
       email: currentUser.email,
-      fullName: currentUser.fullName
+      fullName: currentUser.fullName,
+      mustChangePassword: currentUser.mustChangePassword
     });
 
-    redirect(getDefaultDashboardPath(currentUser.role));
+    redirect(getPostLoginPath(currentUser));
   } catch (error) {
     handleAuthActionError("/login", error);
   }
@@ -170,10 +187,12 @@ export async function logoutAction() {
 export async function createPatientByAdminAction(formData: FormData) {
   await requireRole(UserRole.ADMIN);
 
-  const result = registerSchema.safeParse({
+  const result = registerSchema.omit({ password: true }).extend({
+    password: registerSchema.shape.password.optional()
+  }).safeParse({
     fullName: getField(formData, "fullName"),
     email: getField(formData, "email"),
-    password: getField(formData, "password")
+    password: undefined
   });
 
   if (!result.success) {
@@ -185,6 +204,7 @@ export async function createPatientByAdminAction(formData: FormData) {
   }
 
   const parsed = result.data;
+  const temporaryPassword = generateTemporaryPassword();
 
   if (resolveUserRole(parsed.email) === UserRole.ADMIN) {
     redirect("/admin?error=Ese%20correo%20esta%20reservado%20como%20administrador.");
@@ -195,7 +215,8 @@ export async function createPatientByAdminAction(formData: FormData) {
       data: {
         fullName: parsed.fullName,
         email: parsed.email,
-        passwordHash: await bcrypt.hash(parsed.password, 12),
+        passwordHash: await bcrypt.hash(temporaryPassword, 12),
+        mustChangePassword: true,
         role: UserRole.PATIENT,
         profile: {
           create: {}
@@ -211,7 +232,11 @@ export async function createPatientByAdminAction(formData: FormData) {
   }
 
   revalidatePath("/admin");
-  redirect("/admin?success=Paciente%20creado%20correctamente.");
+  redirect(
+    `/admin?success=${encodeURIComponent(
+      "Paciente creado correctamente."
+    )}&tempPassword=${encodeURIComponent(temporaryPassword)}`
+  );
 }
 
 export async function deletePatientAction(formData: FormData) {
@@ -364,4 +389,41 @@ export async function updatePatientAction(formData: FormData) {
   revalidatePath(`/admin/patients/${parsed.userId}`);
   revalidatePath("/patient");
   redirect(`/admin/patients/${encodeURIComponent(parsed.userId)}?success=Paciente%20actualizado%20correctamente.`);
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const session = await requireUser();
+
+  const result = changePasswordSchema.safeParse({
+    password: getField(formData, "password"),
+    confirmPassword: getField(formData, "confirmPassword")
+  });
+
+  if (!result.success) {
+    redirect(
+      `/change-password?error=${encodeURIComponent(
+        result.error.issues[0]?.message ?? "No pudimos actualizar tu contrasena."
+      )}`
+    );
+  }
+
+  const parsed = result.data;
+
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: {
+      passwordHash: await bcrypt.hash(parsed.password, 12),
+      mustChangePassword: false
+    }
+  });
+
+  await createSession({
+    sub: session.userId,
+    role: session.role,
+    email: session.email,
+    fullName: session.fullName,
+    mustChangePassword: false
+  });
+
+  redirect(getDefaultDashboardPath(session.role));
 }

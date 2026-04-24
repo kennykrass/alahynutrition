@@ -13,17 +13,26 @@ type SessionPayload = {
   role: UserRole;
   email: string;
   fullName: string;
+  mustChangePassword: boolean;
 };
 
 export function getDefaultDashboardPath(role: UserRole) {
   return role === UserRole.ADMIN ? "/admin" : "/patient";
 }
 
+export function getPostLoginPath(session: {
+  role: UserRole;
+  mustChangePassword: boolean;
+}) {
+  return session.mustChangePassword ? "/change-password" : getDefaultDashboardPath(session.role);
+}
+
 export async function createSession(payload: SessionPayload) {
   const token = await new SignJWT({
     role: payload.role,
     email: payload.email,
-    fullName: payload.fullName
+    fullName: payload.fullName,
+    mustChangePassword: payload.mustChangePassword
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
@@ -54,7 +63,12 @@ export async function getSession() {
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(getSessionSecret()));
 
-    if (!payload.sub || typeof payload.email !== "string" || typeof payload.fullName !== "string") {
+    if (
+      !payload.sub ||
+      typeof payload.email !== "string" ||
+      typeof payload.fullName !== "string" ||
+      typeof payload.mustChangePassword !== "boolean"
+    ) {
       return null;
     }
 
@@ -62,7 +76,8 @@ export async function getSession() {
       userId: payload.sub,
       role: payload.role as UserRole,
       email: payload.email,
-      fullName: payload.fullName
+      fullName: payload.fullName,
+      mustChangePassword: payload.mustChangePassword
     };
   } catch {
     return null;
@@ -84,6 +99,16 @@ export async function requireRole(role: UserRole) {
 
   if (session.role !== role) {
     redirect(getDefaultDashboardPath(session.role));
+  }
+
+  return session;
+}
+
+export async function requireCompletedPasswordSetup() {
+  const session = await requireUser();
+
+  if (session.mustChangePassword) {
+    redirect("/change-password");
   }
 
   return session;

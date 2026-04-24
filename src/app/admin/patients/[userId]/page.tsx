@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { updatePatientAction } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { requireCompletedPasswordSetup, requireRole } from "@/lib/session";
 
 type AdminPatientEditPageProps = {
   params: {
@@ -28,6 +28,7 @@ export default async function AdminPatientEditPage({
   params,
   searchParams
 }: AdminPatientEditPageProps) {
+  await requireCompletedPasswordSetup();
   await requireRole(UserRole.ADMIN);
 
   const user = await prisma.user.findUnique({

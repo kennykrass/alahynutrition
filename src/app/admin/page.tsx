@@ -21,6 +21,7 @@ type AdminDashboardPageProps = {
   searchParams?: {
     error?: string;
     success?: string;
+    tempPassword?: string;
   };
 };
 
@@ -130,6 +131,11 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         {searchParams?.success ? (
           <div className="mt-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
             {searchParams.success}
+            {searchParams.tempPassword ? (
+              <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-black/10 px-4 py-3 font-mono text-emerald-50">
+                Contrasena temporal: {searchParams.tempPassword}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -173,13 +179,10 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                   required
                   type="email"
                 />
-                <input
-                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
-                  name="password"
-                  placeholder="Contrasena temporal"
-                  required
-                  type="password"
-                />
+                <div className="rounded-2xl border border-mist/20 bg-white/5 px-4 py-3 text-sm text-[color:var(--text-soft)]">
+                  El sistema generara automaticamente una contrasena temporal y obligara al paciente
+                  a cambiarla en su primer acceso.
+                </div>
                 <button
                   className="rounded-full bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
                   type="submit"
