@@ -12,6 +12,39 @@ enum UserRole {
   PATIENT
 }
 
+enum BiologicalSex {
+  MALE
+  FEMALE
+}
+
+enum PhysicalActivityLevel {
+  NONE
+  LIGHT
+  MODERATE
+  INTENSE
+}
+
+enum PatientStatus {
+  NEW
+  ACTIVE
+  PENDING
+  ARCHIVED
+  EXPIRED
+}
+
+enum CareType {
+  INITIAL
+  FOLLOW_UP
+  RESTART
+}
+
+enum PlanDuration {
+  ONE_MONTH
+  THREE_MONTHS
+  SIX_MONTHS
+  CUSTOM
+}
+
 model User {
   id           String         @id @default(cuid())
   fullName     String
@@ -26,17 +59,30 @@ model User {
 }
 
 model PatientProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  phone           String?
-  birthDate       DateTime?
-  heightCm        Float?
-  initialWeightKg Float?
-  goal            String?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String                @id @default(cuid())
+  userId               String                @unique
+  patientCode          String?               @unique
+  phone                String?
+  birthDate            DateTime?
+  biologicalSex        BiologicalSex?
+  heightCm             Float?
+  initialWeightKg      Float?
+  currentWeightKg      Float?
+  previousDietExperience Boolean?
+  previousDietDuration String?
+  physicalActivityLevel PhysicalActivityLevel?
+  status               PatientStatus         @default(NEW)
+  careType             CareType?
+  planDuration         PlanDuration?
+  contactSchedule      String?
+  medications          String?
+  foodAllergies        String?
+  goal                 String?
+  notes                String?
+  acceptedPrivacyAt    DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ProgressEntry {

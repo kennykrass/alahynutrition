@@ -1,6 +1,12 @@
 "use server";
 
-import { Prisma, UserRole } from "@prisma/client";
+import {
+  CareType,
+  PatientStatus,
+  PlanDuration,
+  Prisma,
+  UserRole
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -61,6 +67,25 @@ function parseOptionalFloat(value?: string) {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
+function calculateAgeFromBirthDate(birthDate: Date) {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const hasNotHadBirthdayYet =
+    today.getMonth() < birthDate.getMonth() ||
+    (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate());
+
+  if (hasNotHadBirthdayYet) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+async function generatePatientCode(tx: Prisma.TransactionClient) {
+  const totalProfiles = await tx.patientProfile.count();
+  return `AL-${String(totalProfiles + 1).padStart(4, "0")}`;
+}
+
 function generateTemporaryPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   const values = crypto.getRandomValues(new Uint32Array(10));
@@ -77,7 +102,16 @@ export async function registerAction(formData: FormData) {
   try {
     const result = registerSchema.safeParse({
       fullName: getField(formData, "fullName"),
+      birthDate: getField(formData, "birthDate"),
+      biologicalSex: getField(formData, "biologicalSex"),
+      phone: getField(formData, "phone"),
       email: getField(formData, "email"),
+      heightCm: getField(formData, "heightCm"),
+      currentWeightKg: getField(formData, "currentWeightKg"),
+      previousDietExperience: getField(formData, "previousDietExperience"),
+      previousDietDuration: getOptionalField(formData, "previousDietDuration"),
+      physicalActivityLevel: getField(formData, "physicalActivityLevel"),
+      acceptedPrivacy: formData.get("acceptedPrivacy") === "on",
       password: getField(formData, "password")
     });
 
@@ -89,6 +123,17 @@ export async function registerAction(formData: FormData) {
     }
 
     const parsed = result.data;
+    const birthDate = new Date(`${parsed.birthDate}T00:00:00`);
+
+    if (Number.isNaN(birthDate.getTime())) {
+      return redirectWithError("/register", "La fecha de nacimiento no es valida.");
+    }
+
+    const age = calculateAgeFromBirthDate(birthDate);
+
+    if (age < 10 || age > 120) {
+      return redirectWithError("/register", "La fecha de nacimiento genera una edad no valida.");
+    }
 
     const existingUser = await prisma.user.findUnique({
       where: { email: parsed.email }
@@ -99,17 +144,37 @@ export async function registerAction(formData: FormData) {
     }
 
     const passwordHash = await bcrypt.hash(parsed.password, 12);
+    const user = await prisma.$transaction(async (tx) => {
+      const patientCode = await generatePatientCode(tx);
 
-    const user = await prisma.user.create({
-      data: {
-        fullName: parsed.fullName,
-        email: parsed.email,
-        passwordHash,
-        role: resolveUserRole(parsed.email),
-        profile: {
-          create: {}
+      return tx.user.create({
+        data: {
+          fullName: parsed.fullName,
+          email: parsed.email,
+          passwordHash,
+          role: resolveUserRole(parsed.email),
+          profile: {
+            create: {
+              patientCode,
+              phone: parsed.phone,
+              birthDate,
+              biologicalSex: parsed.biologicalSex,
+              heightCm: parsed.heightCm,
+              initialWeightKg: parsed.currentWeightKg,
+              currentWeightKg: parsed.currentWeightKg,
+              previousDietExperience: parsed.previousDietExperience === "yes",
+              previousDietDuration:
+                parsed.previousDietExperience === "yes" ? parsed.previousDietDuration : undefined,
+              physicalActivityLevel: parsed.physicalActivityLevel,
+              status: PatientStatus.NEW,
+              careType: CareType.INITIAL,
+              planDuration: PlanDuration.CUSTOM,
+              acceptedPrivacyAt: new Date(),
+              notes: `Edad calculada al registro: ${age} anos.`
+            }
+          }
         }
-      }
+      });
     });
 
     await createSession({
