@@ -1,4 +1,10 @@
-import { BiologicalSex, CareType, PatientStatus, PhysicalActivityLevel, PlanDuration } from "@prisma/client";
+import {
+  BiologicalSex,
+  CareType,
+  PatientStatus,
+  PhysicalActivityLevel,
+  PlanDuration
+} from "@prisma/client";
 import { z } from "zod";
 
 const registerBaseSchema = z.object({
@@ -102,37 +108,6 @@ export const adminPatientCreateSchema = registerBaseSchema.omit({
     error: "Selecciona el estatus del paciente."
   })
 });
-
-export const patientProfileCatalogs = {
-  biologicalSex: [
-    { value: BiologicalSex.MALE, label: "Masculino" },
-    { value: BiologicalSex.FEMALE, label: "Femenino" }
-  ],
-  physicalActivityLevel: [
-    { value: PhysicalActivityLevel.NONE, label: "Sedentaria / Nula" },
-    { value: PhysicalActivityLevel.LIGHT, label: "Ligera" },
-    { value: PhysicalActivityLevel.MODERATE, label: "Moderada" },
-    { value: PhysicalActivityLevel.INTENSE, label: "Intensa" }
-  ],
-  patientStatus: [
-    { value: PatientStatus.NEW, label: "Alta nueva" },
-    { value: PatientStatus.ACTIVE, label: "Activo" },
-    { value: PatientStatus.PENDING, label: "Pendiente" },
-    { value: PatientStatus.ARCHIVED, label: "Archivado" },
-    { value: PatientStatus.EXPIRED, label: "Vencido" }
-  ],
-  careType: [
-    { value: CareType.INITIAL, label: "Inicial" },
-    { value: CareType.FOLLOW_UP, label: "Seguimiento" },
-    { value: CareType.RESTART, label: "Recomienzo" }
-  ],
-  planDuration: [
-    { value: PlanDuration.ONE_MONTH, label: "1 mes" },
-    { value: PlanDuration.THREE_MONTHS, label: "3 meses" },
-    { value: PlanDuration.SIX_MONTHS, label: "6 meses" },
-    { value: PlanDuration.CUSTOM, label: "Personalizado" }
-  ]
-};
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

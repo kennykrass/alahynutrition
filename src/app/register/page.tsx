@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AuthCard } from "@/components/auth-card";
+import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 import { getPostLoginPath, getSession } from "@/lib/session";
-import { patientProfileCatalogs } from "@/lib/validations";
 import { registerAction } from "@/app/auth-actions";
 
 type RegisterPageProps = {

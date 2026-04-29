@@ -6,9 +6,9 @@ import {
   deletePatientAction,
   logoutAction
 } from "@/app/auth-actions";
+import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { patientProfileCatalogs } from "@/lib/validations";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("es-MX", {

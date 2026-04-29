@@ -3,9 +3,9 @@ import { UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 
 import { updatePatientAction } from "@/app/auth-actions";
+import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 import { prisma } from "@/lib/prisma";
 import { requireCompletedPasswordSetup, requireRole } from "@/lib/session";
-import { patientProfileCatalogs } from "@/lib/validations";
 
 type AdminPatientEditPageProps = {
   params: {
