@@ -1,6 +1,13 @@
 "use server";
 
-import { CareType, PatientStatus, PlanDuration, Prisma, UserRole } from "@prisma/client";
+import {
+  CareType,
+  PatientDocumentCategory,
+  PatientStatus,
+  PlanDuration,
+  Prisma,
+  UserRole
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -91,6 +98,14 @@ function generateTemporaryPassword() {
   }
 
   return `Alahy${raw}9`;
+}
+
+function redirectToPatientEditorWithError(userId: string, message: string): never {
+  redirect(`/admin/patients/${encodeURIComponent(userId)}?error=${encodeURIComponent(message)}`);
+}
+
+function redirectToPatientEditorWithSuccess(userId: string, message: string): never {
+  redirect(`/admin/patients/${encodeURIComponent(userId)}?success=${encodeURIComponent(message)}`);
 }
 
 export async function registerAction(formData: FormData) {
@@ -426,6 +441,94 @@ export async function archivePatientAction(formData: FormData) {
         : "Paciente restaurado correctamente."
     )}`
   );
+}
+
+export async function uploadPatientDocumentAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+  const title = getField(formData, "title").trim();
+  const category = getField(formData, "category");
+  const file = formData.get("documentFile");
+
+  if (!userId) {
+    redirect("/admin?error=No%20pudimos%20identificar%20al%20paciente.");
+  }
+
+  if (!title || title.length < 3) {
+    redirectToPatientEditorWithError(userId, "Escribe un titulo claro para el documento.");
+  }
+
+  if (!Object.values(PatientDocumentCategory).includes(category as PatientDocumentCategory)) {
+    redirectToPatientEditorWithError(userId, "Selecciona una categoria valida para el documento.");
+  }
+
+  if (!(file instanceof File) || file.size === 0) {
+    redirectToPatientEditorWithError(userId, "Selecciona un archivo PDF o imagen.");
+  }
+
+  if (!(file.type === "application/pdf" || file.type.startsWith("image/"))) {
+    redirectToPatientEditorWithError(userId, "Solo se permiten archivos PDF o imagen.");
+  }
+
+  const maxFileSizeBytes = 5 * 1024 * 1024;
+
+  if (file.size > maxFileSizeBytes) {
+    redirectToPatientEditorWithError(userId, "El archivo excede el limite de 5 MB.");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true
+    }
+  });
+
+  if (!user || user.role !== UserRole.PATIENT) {
+    redirect("/admin?error=Solo%20puedes%20adjuntar%20documentos%20a%20pacientes%20validos.");
+  }
+
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+  await prisma.patientDocument.create({
+    data: {
+      userId,
+      category: category as PatientDocumentCategory,
+      title,
+      originalName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      fileData: fileBuffer,
+      uploadedByRole: UserRole.ADMIN
+    }
+  });
+
+  revalidatePath(`/admin/patients/${userId}`);
+  revalidatePath("/patient");
+  redirectToPatientEditorWithSuccess(userId, "Documento cargado correctamente.");
+}
+
+export async function deletePatientDocumentAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const documentId = getField(formData, "documentId");
+  const userId = getField(formData, "userId");
+
+  if (!documentId || !userId) {
+    redirect("/admin?error=No%20pudimos%20identificar%20el%20documento.");
+  }
+
+  await prisma.patientDocument.deleteMany({
+    where: {
+      id: documentId,
+      userId
+    }
+  });
+
+  revalidatePath(`/admin/patients/${userId}`);
+  revalidatePath("/patient");
+  redirectToPatientEditorWithSuccess(userId, "Documento eliminado correctamente.");
 }
 
 export async function updatePatientAction(formData: FormData) {

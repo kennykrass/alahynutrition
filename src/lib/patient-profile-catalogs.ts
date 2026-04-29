@@ -26,5 +26,11 @@ export const patientProfileCatalogs = {
     { value: "THREE_MONTHS", label: "3 meses" },
     { value: "SIX_MONTHS", label: "6 meses" },
     { value: "CUSTOM", label: "Personalizado" }
+  ],
+  patientDocumentCategory: [
+    { value: "LAB_RESULT", label: "Estudio / laboratorio" },
+    { value: "INDICATION", label: "Indicacion" },
+    { value: "RECIPE", label: "Receta" },
+    { value: "PREVIOUS_PLAN", label: "Plan anterior" }
   ]
 } as const;

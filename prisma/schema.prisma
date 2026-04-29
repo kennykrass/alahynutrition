@@ -45,6 +45,13 @@ enum PlanDuration {
   CUSTOM
 }
 
+enum PatientDocumentCategory {
+  LAB_RESULT
+  INDICATION
+  RECIPE
+  PREVIOUS_PLAN
+}
+
 model User {
   id           String         @id @default(cuid())
   fullName     String
@@ -56,6 +63,7 @@ model User {
   updatedAt    DateTime       @updatedAt
   profile      PatientProfile?
   entries      ProgressEntry[]
+  documents    PatientDocument[]
 }
 
 model PatientProfile {
@@ -98,4 +106,21 @@ model ProgressEntry {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, loggedAt(sort: Desc)])
+}
+
+model PatientDocument {
+  id            String                  @id @default(cuid())
+  userId        String
+  category      PatientDocumentCategory
+  title         String
+  originalName  String
+  mimeType      String
+  sizeBytes     Int
+  fileData      Bytes
+  uploadedByRole UserRole
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, category, createdAt(sort: Desc)])
 }

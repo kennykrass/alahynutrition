@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 
 import { logoutAction } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,18 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default async function PatientDashboardPage() {
   await requireCompletedPasswordSetup();
   const session = await requireRole(UserRole.PATIENT);
@@ -21,6 +34,11 @@ export default async function PatientDashboardPage() {
     where: { id: session.userId },
     include: {
       profile: true,
+      documents: {
+        orderBy: {
+          createdAt: "desc"
+        }
+      },
       entries: {
         orderBy: {
           loggedAt: "desc"
@@ -167,6 +185,54 @@ export default async function PatientDashboardPage() {
                 </div>
               )}
             </div>
+          </div>
+        </section>
+
+        <section className="mt-8 glass rounded-3xl p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+              Documentos disponibles
+            </div>
+            <span className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
+              {user.documents.length} archivos
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-4">
+            {user.documents.length ? (
+              user.documents.map((document) => (
+                <article key={document.id} className="rounded-2xl border border-mist/20 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="text-base font-semibold text-white">{document.title}</div>
+                      <div className="mt-1 text-sm text-[color:var(--text-soft)]">
+                        {patientProfileCatalogs.patientDocumentCategory.find(
+                          (option) => option.value === document.category
+                        )?.label || document.category}
+                      </div>
+                    </div>
+
+                    <Link
+                      className="rounded-full border border-cyan-400/30 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-500/10"
+                      href={`/documents/${document.id}`}
+                      target="_blank"
+                    >
+                      Ver archivo
+                    </Link>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 text-sm text-[color:var(--text-soft)] md:grid-cols-3">
+                    <div>Archivo: {document.originalName}</div>
+                    <div>Tamano: {formatFileSize(document.sizeBytes)}</div>
+                    <div>Fecha: {formatDate(document.createdAt)}</div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-mist/20 p-6 text-sm text-[color:var(--text-soft)]">
+                Aun no tienes documentos compartidos en tu expediente.
+              </div>
+            )}
           </div>
         </section>
       </div>
