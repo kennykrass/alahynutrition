@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { updatePatientAction } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
 import { requireCompletedPasswordSetup, requireRole } from "@/lib/session";
+import { patientProfileCatalogs } from "@/lib/validations";
 
 type AdminPatientEditPageProps = {
   params: {
@@ -24,6 +25,24 @@ function formatDateForInput(value?: Date | null) {
   return value.toISOString().slice(0, 10);
 }
 
+function calculateAgeFromBirthDate(value?: Date | null) {
+  if (!value) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - value.getFullYear();
+  const hasNotHadBirthdayYet =
+    today.getMonth() < value.getMonth() ||
+    (today.getMonth() === value.getMonth() && today.getDate() < value.getDate());
+
+  if (hasNotHadBirthdayYet) {
+    age -= 1;
+  }
+
+  return age;
+}
+
 export default async function AdminPatientEditPage({
   params,
   searchParams
@@ -41,6 +60,8 @@ export default async function AdminPatientEditPage({
   if (!user || user.role !== UserRole.PATIENT) {
     notFound();
   }
+
+  const calculatedAge = calculateAgeFromBirthDate(user.profile?.birthDate);
 
   return (
     <main className="px-6 py-8 md:px-12">
@@ -83,6 +104,39 @@ export default async function AdminPatientEditPage({
         <section className="mt-8 glass rounded-3xl p-6 md:p-8">
           <form action={updatePatientAction} className="grid gap-8">
             <input name="userId" type="hidden" value={user.id} />
+
+            <div className="grid gap-4 rounded-3xl border border-mist/15 bg-ink/40 p-5 md:grid-cols-4">
+              <div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
+                  Codigo
+                </div>
+                <div className="mt-2 text-base font-semibold text-white">
+                  {user.profile?.patientCode || "Pendiente"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
+                  Edad calculada
+                </div>
+                <div className="mt-2 text-base font-semibold text-white">
+                  {calculatedAge !== null ? `${calculatedAge} anos` : "Pendiente"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
+                  Alta
+                </div>
+                <div className="mt-2 text-base font-semibold text-white">
+                  {formatDateForInput(user.createdAt)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
+                  Cuenta
+                </div>
+                <div className="mt-2 text-base font-semibold text-white">Paciente</div>
+              </div>
+            </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
@@ -128,6 +182,22 @@ export default async function AdminPatientEditPage({
               </label>
 
               <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Genero biologico
+                <select
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition focus:border-glow"
+                  defaultValue={user.profile?.biologicalSex ?? ""}
+                  name="biologicalSex"
+                >
+                  <option value="">Selecciona una opcion</option>
+                  {patientProfileCatalogs.biologicalSex.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
                 Altura (cm)
                 <input
                   className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
@@ -150,6 +220,115 @@ export default async function AdminPatientEditPage({
                   type="number"
                 />
               </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Peso actual (kg)
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  defaultValue={user.profile?.currentWeightKg ?? ""}
+                  min="0"
+                  name="currentWeightKg"
+                  step="0.1"
+                  type="number"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Tipo de atencion
+                <select
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition focus:border-glow"
+                  defaultValue={user.profile?.careType ?? ""}
+                  name="careType"
+                >
+                  <option value="">Selecciona una opcion</option>
+                  {patientProfileCatalogs.careType.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Duracion del plan
+                <select
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition focus:border-glow"
+                  defaultValue={user.profile?.planDuration ?? ""}
+                  name="planDuration"
+                >
+                  <option value="">Selecciona una opcion</option>
+                  {patientProfileCatalogs.planDuration.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Estatus
+                <select
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition focus:border-glow"
+                  defaultValue={user.profile?.status ?? ""}
+                  name="status"
+                >
+                  {patientProfileCatalogs.patientStatus.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Actividad fisica
+                <select
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition focus:border-glow"
+                  defaultValue={user.profile?.physicalActivityLevel ?? ""}
+                  name="physicalActivityLevel"
+                >
+                  <option value="">Selecciona una opcion</option>
+                  {patientProfileCatalogs.physicalActivityLevel.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Ha llevado plan antes
+                <select
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition focus:border-glow"
+                  defaultValue={
+                    user.profile?.previousDietExperience === undefined
+                      ? ""
+                      : user.profile.previousDietExperience
+                        ? "yes"
+                        : "no"
+                  }
+                  name="previousDietExperience"
+                >
+                  <option value="">Selecciona una opcion</option>
+                  <option value="yes">Si</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Cuanto tiempo llevo ese plan
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  defaultValue={user.profile?.previousDietDuration ?? ""}
+                  name="previousDietDuration"
+                  placeholder="Ej. 6 meses, 1 ano, 8 semanas"
+                  type="text"
+                />
+              </label>
             </div>
 
             <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
@@ -161,6 +340,39 @@ export default async function AdminPatientEditPage({
                 type="text"
               />
             </label>
+
+            <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+              Horarios para contacto o recordatorios
+              <input
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                defaultValue={user.profile?.contactSchedule ?? ""}
+                name="contactSchedule"
+                placeholder="Ej. Lunes a viernes despues de las 6 pm"
+                type="text"
+              />
+            </label>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Medicamentos
+                <textarea
+                  className="min-h-28 rounded-3xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  defaultValue={user.profile?.medications ?? ""}
+                  name="medications"
+                  placeholder="Medicamentos actuales o relevantes"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
+                Alergias a alimentos
+                <textarea
+                  className="min-h-28 rounded-3xl border border-mist/25 bg-ink/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  defaultValue={user.profile?.foodAllergies ?? ""}
+                  name="foodAllergies"
+                  placeholder="Alergias alimentarias conocidas"
+                />
+              </label>
+            </div>
 
             <label className="grid gap-2 text-sm text-[color:var(--text-soft)]">
               Notas

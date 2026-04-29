@@ -8,6 +8,7 @@ import {
 } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { patientProfileCatalogs } from "@/lib/validations";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("es-MX", {
@@ -15,6 +16,24 @@ function formatDate(value: Date) {
     month: "short",
     year: "numeric"
   }).format(value);
+}
+
+function calculateAgeFromBirthDate(value?: Date | null) {
+  if (!value) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - value.getFullYear();
+  const hasNotHadBirthdayYet =
+    today.getMonth() < value.getMonth() ||
+    (today.getMonth() === value.getMonth() && today.getDate() < value.getDate());
+
+  if (hasNotHadBirthdayYet) {
+    age -= 1;
+  }
+
+  return age;
 }
 
 type AdminDashboardPageProps = {
@@ -172,13 +191,144 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                   required
                   type="text"
                 />
-                <input
-                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
-                  name="email"
-                  placeholder="correo@ejemplo.com"
-                  required
-                  type="email"
-                />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    max={new Date().toISOString().slice(0, 10)}
+                    name="birthDate"
+                    required
+                    type="date"
+                  />
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue=""
+                    name="biologicalSex"
+                    required
+                  >
+                    <option disabled value="">
+                      Genero biologico
+                    </option>
+                    {patientProfileCatalogs.biologicalSex.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                    name="phone"
+                    placeholder="Telefono"
+                    required
+                    type="tel"
+                  />
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                    name="email"
+                    placeholder="correo@ejemplo.com"
+                    required
+                    type="email"
+                  />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                    min="1"
+                    name="heightCm"
+                    placeholder="Altura en cm"
+                    required
+                    step="0.1"
+                    type="number"
+                  />
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                    min="1"
+                    name="currentWeightKg"
+                    placeholder="Peso actual en kg"
+                    required
+                    step="0.1"
+                    type="number"
+                  />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue="no"
+                    name="previousDietExperience"
+                    required
+                  >
+                    <option value="no">No ha llevado plan antes</option>
+                    <option value="yes">Si ha llevado plan antes</option>
+                  </select>
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                    name="previousDietDuration"
+                    placeholder="Cuanto tiempo?"
+                    type="text"
+                  />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue=""
+                    name="physicalActivityLevel"
+                    required
+                  >
+                    <option disabled value="">
+                      Actividad fisica
+                    </option>
+                    {patientProfileCatalogs.physicalActivityLevel.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue=""
+                    name="careType"
+                    required
+                  >
+                    <option disabled value="">
+                      Tipo de atencion
+                    </option>
+                    {patientProfileCatalogs.careType.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue=""
+                    name="planDuration"
+                    required
+                  >
+                    <option disabled value="">
+                      Duracion del plan
+                    </option>
+                    {patientProfileCatalogs.planDuration.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue="NEW"
+                    name="status"
+                    required
+                  >
+                    {patientProfileCatalogs.patientStatus.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="rounded-2xl border border-mist/20 bg-white/5 px-4 py-3 text-sm text-[color:var(--text-soft)]">
                   El sistema generara automaticamente una contrasena temporal y obligara al paciente
                   a cambiarla en su primer acceso.
@@ -210,7 +360,9 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="text-lg font-semibold text-white">{user.fullName}</div>
-                        <div className="text-sm text-[color:var(--text-soft)]">{user.email}</div>
+                        <div className="text-sm text-[color:var(--text-soft)]">
+                          {user.profile?.patientCode || "Sin ID"} · {user.email}
+                        </div>
                       </div>
                       <div className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
                         {user.role === UserRole.ADMIN ? "Administrador" : "Paciente"}
@@ -219,10 +371,34 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
 
                     <div className="mt-4 grid gap-2 text-sm text-[color:var(--text-soft)] md:grid-cols-3">
                       <div>Alta: {formatDate(user.createdAt)}</div>
-                      <div>Meta: {user.profile?.goal || "Sin meta"}</div>
+                      <div>
+                        Edad:{" "}
+                        {calculateAgeFromBirthDate(user.profile?.birthDate) ?? "Sin fecha de nacimiento"}
+                      </div>
                       <div>
                         Ultimo registro:{" "}
                         {user.entries[0] ? formatDate(user.entries[0].loggedAt) : "Sin registros"}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm text-[color:var(--text-soft)] md:grid-cols-3">
+                      <div>
+                        Estatus:{" "}
+                        {patientProfileCatalogs.patientStatus.find(
+                          (option) => option.value === user.profile?.status
+                        )?.label || "Sin estatus"}
+                      </div>
+                      <div>
+                        Atencion:{" "}
+                        {patientProfileCatalogs.careType.find(
+                          (option) => option.value === user.profile?.careType
+                        )?.label || "Sin definir"}
+                      </div>
+                      <div>
+                        Plan:{" "}
+                        {patientProfileCatalogs.planDuration.find(
+                          (option) => option.value === user.profile?.planDuration
+                        )?.label || "Sin definir"}
                       </div>
                     </div>
 

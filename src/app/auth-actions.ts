@@ -1,12 +1,6 @@
 "use server";
 
-import {
-  CareType,
-  PatientStatus,
-  PlanDuration,
-  Prisma,
-  UserRole
-} from "@prisma/client";
+import { CareType, PatientStatus, PlanDuration, Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -22,6 +16,7 @@ import {
   requireRole
 } from "@/lib/session";
 import {
+  adminPatientCreateSchema,
   adminPatientUpdateSchema,
   changePasswordSchema,
   loginSchema,
@@ -252,12 +247,20 @@ export async function logoutAction() {
 export async function createPatientByAdminAction(formData: FormData) {
   await requireRole(UserRole.ADMIN);
 
-  const result = registerSchema.omit({ password: true }).extend({
-    password: registerSchema.shape.password.optional()
-  }).safeParse({
+  const result = adminPatientCreateSchema.safeParse({
     fullName: getField(formData, "fullName"),
+    birthDate: getField(formData, "birthDate"),
+    biologicalSex: getField(formData, "biologicalSex"),
+    phone: getField(formData, "phone"),
     email: getField(formData, "email"),
-    password: undefined
+    heightCm: getField(formData, "heightCm"),
+    currentWeightKg: getField(formData, "currentWeightKg"),
+    previousDietExperience: getField(formData, "previousDietExperience"),
+    previousDietDuration: getOptionalField(formData, "previousDietDuration"),
+    physicalActivityLevel: getField(formData, "physicalActivityLevel"),
+    careType: getField(formData, "careType"),
+    planDuration: getField(formData, "planDuration"),
+    status: getField(formData, "status")
   });
 
   if (!result.success) {
@@ -270,23 +273,54 @@ export async function createPatientByAdminAction(formData: FormData) {
 
   const parsed = result.data;
   const temporaryPassword = generateTemporaryPassword();
+  const birthDate = new Date(`${parsed.birthDate}T00:00:00`);
+
+  if (Number.isNaN(birthDate.getTime())) {
+    redirect("/admin?error=La%20fecha%20de%20nacimiento%20no%20es%20valida.");
+  }
+
+  const age = calculateAgeFromBirthDate(birthDate);
+
+  if (age < 10 || age > 120) {
+    redirect("/admin?error=La%20fecha%20de%20nacimiento%20genera%20una%20edad%20no%20valida.");
+  }
 
   if (resolveUserRole(parsed.email) === UserRole.ADMIN) {
     redirect("/admin?error=Ese%20correo%20esta%20reservado%20como%20administrador.");
   }
 
   try {
-    await prisma.user.create({
-      data: {
-        fullName: parsed.fullName,
-        email: parsed.email,
-        passwordHash: await bcrypt.hash(temporaryPassword, 12),
-        mustChangePassword: true,
-        role: UserRole.PATIENT,
-        profile: {
-          create: {}
+    await prisma.$transaction(async (tx) => {
+      const patientCode = await generatePatientCode(tx);
+
+      await tx.user.create({
+        data: {
+          fullName: parsed.fullName,
+          email: parsed.email,
+          passwordHash: await bcrypt.hash(temporaryPassword, 12),
+          mustChangePassword: true,
+          role: UserRole.PATIENT,
+          profile: {
+            create: {
+              patientCode,
+              phone: parsed.phone,
+              birthDate,
+              biologicalSex: parsed.biologicalSex,
+              heightCm: parsed.heightCm,
+              initialWeightKg: parsed.currentWeightKg,
+              currentWeightKg: parsed.currentWeightKg,
+              previousDietExperience: parsed.previousDietExperience === "yes",
+              previousDietDuration:
+                parsed.previousDietExperience === "yes" ? parsed.previousDietDuration : undefined,
+              physicalActivityLevel: parsed.physicalActivityLevel,
+              status: parsed.status,
+              careType: parsed.careType,
+              planDuration: parsed.planDuration,
+              notes: `Edad calculada al alta manual: ${age} anos.`
+            }
+          }
         }
-      }
+      });
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -349,8 +383,19 @@ export async function updatePatientAction(formData: FormData) {
     email: getField(formData, "email"),
     phone: getOptionalField(formData, "phone"),
     birthDate: getOptionalField(formData, "birthDate"),
+    biologicalSex: getOptionalField(formData, "biologicalSex"),
     heightCm: getOptionalField(formData, "heightCm"),
     initialWeightKg: getOptionalField(formData, "initialWeightKg"),
+    currentWeightKg: getOptionalField(formData, "currentWeightKg"),
+    previousDietExperience: getOptionalField(formData, "previousDietExperience"),
+    previousDietDuration: getOptionalField(formData, "previousDietDuration"),
+    physicalActivityLevel: getOptionalField(formData, "physicalActivityLevel"),
+    status: getOptionalField(formData, "status"),
+    careType: getOptionalField(formData, "careType"),
+    planDuration: getOptionalField(formData, "planDuration"),
+    contactSchedule: getOptionalField(formData, "contactSchedule"),
+    medications: getOptionalField(formData, "medications"),
+    foodAllergies: getOptionalField(formData, "foodAllergies"),
     goal: getOptionalField(formData, "goal"),
     notes: getOptionalField(formData, "notes")
   });
@@ -375,11 +420,12 @@ export async function updatePatientAction(formData: FormData) {
 
   const heightCm = parseOptionalFloat(parsed.heightCm);
   const initialWeightKg = parseOptionalFloat(parsed.initialWeightKg);
+  const currentWeightKg = parseOptionalFloat(parsed.currentWeightKg);
 
-  if (Number.isNaN(heightCm) || Number.isNaN(initialWeightKg)) {
+  if (Number.isNaN(heightCm) || Number.isNaN(initialWeightKg) || Number.isNaN(currentWeightKg)) {
     redirect(
       `/admin/patients/${encodeURIComponent(parsed.userId)}?error=${encodeURIComponent(
-        "Altura y peso inicial deben ser numeros validos."
+        "Altura, peso inicial y peso actual deben ser numeros validos."
       )}`
     );
   }
@@ -421,16 +467,46 @@ export async function updatePatientAction(formData: FormData) {
             create: {
               phone: parsed.phone,
               birthDate,
+              biologicalSex: parsed.biologicalSex,
               heightCm,
               initialWeightKg,
+              currentWeightKg,
+              previousDietExperience:
+                parsed.previousDietExperience === undefined
+                  ? undefined
+                  : parsed.previousDietExperience === "yes",
+              previousDietDuration:
+                parsed.previousDietExperience === "yes" ? parsed.previousDietDuration : undefined,
+              physicalActivityLevel: parsed.physicalActivityLevel,
+              status: parsed.status,
+              careType: parsed.careType,
+              planDuration: parsed.planDuration,
+              contactSchedule: parsed.contactSchedule,
+              medications: parsed.medications,
+              foodAllergies: parsed.foodAllergies,
               goal: parsed.goal,
               notes: parsed.notes
             },
             update: {
               phone: parsed.phone,
               birthDate,
+              biologicalSex: parsed.biologicalSex,
               heightCm,
               initialWeightKg,
+              currentWeightKg,
+              previousDietExperience:
+                parsed.previousDietExperience === undefined
+                  ? undefined
+                  : parsed.previousDietExperience === "yes",
+              previousDietDuration:
+                parsed.previousDietExperience === "yes" ? parsed.previousDietDuration : null,
+              physicalActivityLevel: parsed.physicalActivityLevel,
+              status: parsed.status,
+              careType: parsed.careType,
+              planDuration: parsed.planDuration,
+              contactSchedule: parsed.contactSchedule,
+              medications: parsed.medications,
+              foodAllergies: parsed.foodAllergies,
               goal: parsed.goal,
               notes: parsed.notes
             }

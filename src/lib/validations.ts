@@ -1,13 +1,7 @@
-import {
-  BiologicalSex,
-  CareType,
-  PatientStatus,
-  PhysicalActivityLevel,
-  PlanDuration
-} from "@prisma/client";
+import { BiologicalSex, CareType, PatientStatus, PhysicalActivityLevel, PlanDuration } from "@prisma/client";
 import { z } from "zod";
 
-export const registerSchema = z.object({
+const registerBaseSchema = z.object({
   fullName: z.string().trim().min(3, "Escribe tu nombre completo."),
   birthDate: z.string().trim().min(1, "Selecciona tu fecha de nacimiento."),
   biologicalSex: z.nativeEnum(BiologicalSex, {
@@ -31,7 +25,9 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, "Incluye al menos una letra mayuscula.")
     .regex(/[a-z]/, "Incluye al menos una letra minuscula.")
     .regex(/[0-9]/, "Incluye al menos un numero.")
-}).superRefine((data, ctx) => {
+});
+
+export const registerSchema = registerBaseSchema.superRefine((data, ctx) => {
   if (data.previousDietExperience === "yes" && !data.previousDietDuration?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -67,10 +63,44 @@ export const adminPatientUpdateSchema = z.object({
   email: z.email("Escribe un correo valido.").transform((value) => value.toLowerCase()),
   phone: z.string().trim().max(30, "El telefono es demasiado largo.").optional(),
   birthDate: z.string().trim().optional(),
+  biologicalSex: z.nativeEnum(BiologicalSex).optional(),
   heightCm: z.string().trim().optional(),
   initialWeightKg: z.string().trim().optional(),
+  currentWeightKg: z.string().trim().optional(),
+  previousDietExperience: z.enum(["yes", "no"]).optional(),
+  previousDietDuration: z.string().trim().optional(),
+  physicalActivityLevel: z.nativeEnum(PhysicalActivityLevel).optional(),
+  status: z.nativeEnum(PatientStatus).optional(),
+  careType: z.nativeEnum(CareType).optional(),
+  planDuration: z.nativeEnum(PlanDuration).optional(),
+  contactSchedule: z.string().trim().max(200, "El horario de contacto es demasiado largo.").optional(),
+  medications: z.string().trim().max(500, "La lista de medicamentos es demasiado larga.").optional(),
+  foodAllergies: z.string().trim().max(500, "La lista de alergias es demasiado larga.").optional(),
   goal: z.string().trim().max(200, "La meta es demasiado larga.").optional(),
   notes: z.string().trim().max(1000, "Las notas son demasiado largas.").optional()
+}).superRefine((data, ctx) => {
+  if (data.previousDietExperience === "yes" && !data.previousDietDuration?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Indica cuanto tiempo llevo previamente un plan de alimentacion.",
+      path: ["previousDietDuration"]
+    });
+  }
+});
+
+export const adminPatientCreateSchema = registerBaseSchema.omit({
+  acceptedPrivacy: true,
+  password: true
+}).extend({
+  careType: z.nativeEnum(CareType, {
+    error: "Selecciona el tipo de atencion."
+  }),
+  planDuration: z.nativeEnum(PlanDuration, {
+    error: "Selecciona la duracion del plan."
+  }),
+  status: z.nativeEnum(PatientStatus, {
+    error: "Selecciona el estatus del paciente."
+  })
 });
 
 export const patientProfileCatalogs = {
@@ -108,3 +138,4 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type AdminPatientUpdateInput = z.infer<typeof adminPatientUpdateSchema>;
+export type AdminPatientCreateInput = z.infer<typeof adminPatientCreateSchema>;
