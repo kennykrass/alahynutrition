@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { UserRole } from "@prisma/client";
+import { PatientStatus, Prisma, UserRole } from "@prisma/client";
 
 import {
+  archivePatientAction,
   createPatientByAdminAction,
   deletePatientAction,
   logoutAction
@@ -41,17 +42,50 @@ type AdminDashboardPageProps = {
     error?: string;
     success?: string;
     tempPassword?: string;
+    query?: string;
+    status?: string;
+    careType?: string;
+    planDuration?: string;
+    includeArchived?: string;
   };
 };
 
 export default async function AdminDashboardPage({ searchParams }: AdminDashboardPageProps) {
   const session = await requireRole(UserRole.ADMIN);
+  const query = searchParams?.query?.trim() ?? "";
+  const statusFilter = searchParams?.status?.trim() ?? "";
+  const careTypeFilter = searchParams?.careType?.trim() ?? "";
+  const planDurationFilter = searchParams?.planDuration?.trim() ?? "";
+  const includeArchived = searchParams?.includeArchived === "true";
 
-  const [adminUser, users, totalUsers, totalPatients, totalEntries] = await Promise.all([
+  const userWhere: Prisma.UserWhereInput = {
+    ...(query
+      ? {
+          OR: [
+            { fullName: { contains: query, mode: "insensitive" } },
+            { email: { contains: query, mode: "insensitive" } },
+            { profile: { patientCode: { contains: query, mode: "insensitive" } } }
+          ]
+        }
+      : {}),
+    ...(statusFilter || careTypeFilter || planDurationFilter || !includeArchived
+      ? {
+          profile: {
+            ...(statusFilter ? { status: statusFilter as PatientStatus } : {}),
+            ...(careTypeFilter ? { careType: careTypeFilter as never } : {}),
+            ...(planDurationFilter ? { planDuration: planDurationFilter as never } : {}),
+            ...(!includeArchived && !statusFilter ? { status: { not: PatientStatus.ARCHIVED } } : {})
+          }
+        }
+      : {})
+  };
+
+  const [adminUser, users, totalUsers, totalPatients, totalArchivedPatients, totalEntries] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId }
     }),
     prisma.user.findMany({
+      where: userWhere,
       include: {
         profile: true,
         entries: {
@@ -68,6 +102,14 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
     prisma.user.count(),
     prisma.user.count({
       where: { role: UserRole.PATIENT }
+    }),
+    prisma.user.count({
+      where: {
+        role: UserRole.PATIENT,
+        profile: {
+          status: PatientStatus.ARCHIVED
+        }
+      }
     }),
     prisma.progressEntry.count()
   ]);
@@ -130,6 +172,9 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
               Pacientes
             </div>
             <div className="mt-4 text-3xl font-semibold text-white">{totalPatients}</div>
+            <div className="mt-2 text-sm text-[color:var(--text-soft)]">
+              {totalArchivedPatients} archivados
+            </div>
           </div>
 
           <div className="glass rounded-3xl p-6">
@@ -349,9 +394,81 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                 Pacientes recientes
               </div>
               <span className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
-                {users.length} usuarios en base
+                {users.length} resultados
               </span>
             </div>
+
+            <form className="mt-6 grid gap-3 rounded-2xl border border-mist/15 bg-ink/30 p-4 md:grid-cols-2 xl:grid-cols-5">
+              <input
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow xl:col-span-2"
+                defaultValue={query}
+                name="query"
+                placeholder="Buscar por nombre, correo o ID"
+                type="text"
+              />
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                defaultValue={statusFilter}
+                name="status"
+              >
+                <option value="">Todos los estatus</option>
+                {patientProfileCatalogs.patientStatus.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                defaultValue={careTypeFilter}
+                name="careType"
+              >
+                <option value="">Toda la atencion</option>
+                {patientProfileCatalogs.careType.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                defaultValue={planDurationFilter}
+                name="planDuration"
+              >
+                <option value="">Todos los planes</option>
+                {patientProfileCatalogs.planDuration.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <label className="flex items-center gap-3 text-sm text-[color:var(--text-soft)] xl:col-span-3">
+                <input
+                  className="h-4 w-4 rounded border-mist/30 bg-ink/60 text-glow focus:ring-glow"
+                  defaultChecked={includeArchived}
+                  name="includeArchived"
+                  type="checkbox"
+                  value="true"
+                />
+                Incluir pacientes archivados
+              </label>
+
+              <div className="flex flex-wrap gap-3 xl:col-span-2 xl:justify-end">
+                <button
+                  className="rounded-full bg-glow px-4 py-2 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                  type="submit"
+                >
+                  Aplicar filtros
+                </button>
+                <Link
+                  className="rounded-full border border-mist/25 px-4 py-2 text-sm text-white transition hover:border-white"
+                  href="/admin"
+                >
+                  Limpiar
+                </Link>
+              </div>
+            </form>
 
             <div className="mt-6 grid gap-4">
               {users.length ? (
@@ -364,8 +481,15 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                           {user.profile?.patientCode || "Sin ID"} · {user.email}
                         </div>
                       </div>
-                      <div className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
-                        {user.role === UserRole.ADMIN ? "Administrador" : "Paciente"}
+                      <div className="flex flex-wrap gap-2">
+                        <div className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
+                          {user.role === UserRole.ADMIN ? "Administrador" : "Paciente"}
+                        </div>
+                        {user.profile?.status === PatientStatus.ARCHIVED ? (
+                          <div className="rounded-full border border-amber-400/30 px-3 py-1 text-xs text-amber-100">
+                            Archivado
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
@@ -410,6 +534,26 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                         >
                           Editar paciente
                         </Link>
+                        <form action={archivePatientAction}>
+                          <input name="userId" type="hidden" value={user.id} />
+                          <input
+                            name="nextStatus"
+                            type="hidden"
+                            value={
+                              user.profile?.status === PatientStatus.ARCHIVED
+                                ? PatientStatus.ACTIVE
+                                : PatientStatus.ARCHIVED
+                            }
+                          />
+                          <button
+                            className="rounded-full border border-amber-400/30 px-4 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-300 hover:bg-amber-500/10"
+                            type="submit"
+                          >
+                            {user.profile?.status === PatientStatus.ARCHIVED
+                              ? "Restaurar paciente"
+                              : "Archivar paciente"}
+                          </button>
+                        </form>
                         <form action={deletePatientAction}>
                           <input name="userId" type="hidden" value={user.id} />
                           <button

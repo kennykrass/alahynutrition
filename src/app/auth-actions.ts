@@ -374,6 +374,60 @@ export async function deletePatientAction(formData: FormData) {
   redirect("/admin?success=Paciente%20eliminado%20correctamente.");
 }
 
+export async function archivePatientAction(formData: FormData) {
+  const session = await requireRole(UserRole.ADMIN);
+  const userId = getField(formData, "userId");
+  const nextStatus = getField(formData, "nextStatus");
+
+  if (!userId) {
+    redirect("/admin?error=No%20pudimos%20identificar%20al%20paciente.");
+  }
+
+  if (nextStatus !== PatientStatus.ARCHIVED && nextStatus !== PatientStatus.ACTIVE) {
+    redirect("/admin?error=No%20pudimos%20resolver%20el%20nuevo%20estatus.");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true
+    }
+  });
+
+  if (!user) {
+    redirect("/admin?error=El%20paciente%20ya%20no%20existe.");
+  }
+
+  if (user.id === session.userId) {
+    redirect("/admin?error=No%20puedes%20archivar%20tu%20propia%20cuenta.");
+  }
+
+  if (user.role !== UserRole.PATIENT) {
+    redirect("/admin?error=Solo%20puedes%20actualizar%20cuentas%20de%20paciente.");
+  }
+
+  await prisma.patientProfile.upsert({
+    where: { userId: user.id },
+    update: {
+      status: nextStatus
+    },
+    create: {
+      userId: user.id,
+      status: nextStatus
+    }
+  });
+
+  revalidatePath("/admin");
+  redirect(
+    `/admin?success=${encodeURIComponent(
+      nextStatus === PatientStatus.ARCHIVED
+        ? "Paciente archivado correctamente."
+        : "Paciente restaurado correctamente."
+    )}`
+  );
+}
+
 export async function updatePatientAction(formData: FormData) {
   await requireRole(UserRole.ADMIN);
 
