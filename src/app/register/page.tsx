@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
+import { logoutAction } from "@/app/auth-actions";
 import { AuthCard } from "@/components/auth-card";
 import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 import { getPostLoginPath, getSession } from "@/lib/session";
@@ -16,7 +16,36 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const session = await getSession();
 
   if (session) {
-    redirect(getPostLoginPath(session));
+    const dashboardPath = getPostLoginPath(session);
+
+    return (
+      <AuthCard
+        alternateHref={dashboardPath}
+        alternateLabel="Ir a mi panel"
+        alternateText="Ya tienes una sesion activa."
+        description="Tu cuenta ya esta autenticada. Desde aqui puedes volver al panel correspondiente o cerrar sesion para registrar un paciente distinto."
+        eyebrow="Sesion activa"
+        title="Ya entraste a la plataforma"
+      >
+        <div className="grid gap-4">
+          <Link
+            className="rounded-2xl bg-glow px-4 py-3 text-center text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+            href={dashboardPath}
+          >
+            Ir a {session.role === "ADMIN" ? "admin" : "mi panel"}
+          </Link>
+
+          <form action={logoutAction}>
+            <button
+              className="w-full rounded-2xl border border-mist/25 bg-ink/40 px-4 py-3 text-sm font-medium text-white transition hover:border-white"
+              type="submit"
+            >
+              Cerrar sesion y registrar otra cuenta
+            </button>
+          </form>
+        </div>
+      </AuthCard>
+    );
   }
 
   return (
