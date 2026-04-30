@@ -1,9 +1,12 @@
 import {
+  AppointmentStatus,
+  AppointmentType,
   BiologicalSex,
   CareType,
   PatientStatus,
   PhysicalActivityLevel,
-  PlanDuration
+  PlanDuration,
+  WeekDay
 } from "@prisma/client";
 import { z } from "zod";
 
@@ -109,8 +112,58 @@ export const adminPatientCreateSchema = registerBaseSchema.omit({
   })
 });
 
+export const availabilitySlotSchema = z.object({
+  dayOfWeek: z.nativeEnum(WeekDay, {
+    error: "Selecciona un dia valido."
+  }),
+  startTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Escribe una hora inicial valida."),
+  endTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Escribe una hora final valida.")
+}).refine((data) => data.endTime > data.startTime, {
+  message: "La hora final debe ser posterior a la hora inicial.",
+  path: ["endTime"]
+});
+
+export const appointmentBaseSchema = z.object({
+  userId: z.string().trim().min(1, "No pudimos identificar al paciente."),
+  type: z.nativeEnum(AppointmentType, {
+    error: "Selecciona un tipo de cita valido."
+  }),
+  scheduledAt: z.string().trim().min(1, "Selecciona fecha y hora para la cita."),
+  notes: z.string().trim().max(800, "Las notas son demasiado largas.").optional(),
+  isFlexibleRequest: z.boolean().optional()
+});
+
+export const adminAppointmentCreateSchema = appointmentBaseSchema;
+
+export const patientAppointmentRequestSchema = z.object({
+  type: z.nativeEnum(AppointmentType, {
+    error: "Selecciona un tipo de cita valido."
+  }),
+  scheduledAt: z.string().trim().min(1, "Selecciona una fecha y hora tentativa."),
+  notes: z.string().trim().max(800, "Las notas son demasiado largas.").optional(),
+  isFlexibleRequest: z.boolean().optional()
+});
+
+export const appointmentStatusUpdateSchema = z.object({
+  appointmentId: z.string().trim().min(1, "No pudimos identificar la cita."),
+  status: z.nativeEnum(AppointmentStatus, {
+    error: "Selecciona un estatus valido."
+  })
+});
+
+export const appointmentRescheduleRequestSchema = z.object({
+  appointmentId: z.string().trim().min(1, "No pudimos identificar la cita."),
+  requestedScheduledAt: z.string().trim().min(1, "Selecciona la nueva fecha tentativa."),
+  requestedChangeNote: z.string().trim().max(800, "La nota de reprogramacion es demasiado larga.").optional()
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type AdminPatientUpdateInput = z.infer<typeof adminPatientUpdateSchema>;
 export type AdminPatientCreateInput = z.infer<typeof adminPatientCreateSchema>;
+export type AvailabilitySlotInput = z.infer<typeof availabilitySlotSchema>;
+export type AdminAppointmentCreateInput = z.infer<typeof adminAppointmentCreateSchema>;
+export type PatientAppointmentRequestInput = z.infer<typeof patientAppointmentRequestSchema>;
+export type AppointmentStatusUpdateInput = z.infer<typeof appointmentStatusUpdateSchema>;
+export type AppointmentRescheduleRequestInput = z.infer<typeof appointmentRescheduleRequestSchema>;

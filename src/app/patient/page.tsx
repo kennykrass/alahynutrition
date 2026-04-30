@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 
-import { logoutAction } from "@/app/auth-actions";
+import { logoutAction, requestAppointmentAction, requestAppointmentRescheduleAction } from "@/app/auth-actions";
 import { prisma } from "@/lib/prisma";
 import { requireCompletedPasswordSetup, requireRole } from "@/lib/session";
 import { UserRole } from "@prisma/client";
@@ -11,6 +11,16 @@ function formatDate(value: Date) {
     day: "2-digit",
     month: "short",
     year: "numeric"
+  }).format(value);
+}
+
+function formatDateTime(value: Date) {
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
   }).format(value);
 }
 
@@ -26,7 +36,14 @@ function formatFileSize(sizeBytes: number) {
   return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default async function PatientDashboardPage() {
+type PatientDashboardPageProps = {
+  searchParams?: {
+    error?: string;
+    success?: string;
+  };
+};
+
+export default async function PatientDashboardPage({ searchParams }: PatientDashboardPageProps) {
   await requireCompletedPasswordSetup();
   const session = await requireRole(UserRole.PATIENT);
 
@@ -34,6 +51,12 @@ export default async function PatientDashboardPage() {
     where: { id: session.userId },
     include: {
       profile: true,
+      appointments: {
+        orderBy: {
+          scheduledAt: "asc"
+        },
+        take: 6
+      },
       documents: {
         orderBy: {
           createdAt: "desc"
@@ -86,6 +109,18 @@ export default async function PatientDashboardPage() {
           </div>
         </header>
 
+        {searchParams?.success ? (
+          <div className="mt-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
+            {searchParams.success}
+          </div>
+        ) : null}
+
+        {searchParams?.error ? (
+          <div className="mt-8 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-100">
+            {searchParams.error}
+          </div>
+        ) : null}
+
         <section className="mt-8 grid gap-6 md:grid-cols-3">
           <div className="glass rounded-3xl p-6">
             <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
@@ -116,6 +151,145 @@ export default async function PatientDashboardPage() {
             </div>
             <div className="mt-2 text-sm text-[color:var(--text-soft)]">
               Proximamente aqui viviran graficas y comparativas.
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
+          <div className="glass rounded-3xl p-6">
+            <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+              Solicitar cita
+            </div>
+            <p className="mt-3 text-sm text-[color:var(--text-soft)]">
+              Solicita tu cita inicial, seguimiento, recomienzo o llamada. Si necesitas salirte del
+              horario habitual, marca la solicitud como flexible.
+            </p>
+
+            <form action={requestAppointmentAction} className="mt-6 grid gap-4">
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                defaultValue=""
+                name="type"
+                required
+              >
+                <option disabled value="">
+                  Tipo de cita
+                </option>
+                {patientProfileCatalogs.appointmentType.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                name="scheduledAt"
+                required
+                type="datetime-local"
+              />
+
+              <label className="flex items-center gap-3 text-sm text-[color:var(--text-soft)]">
+                <input
+                  className="h-4 w-4 rounded border-mist/30 bg-ink/60 text-glow focus:ring-glow"
+                  name="isFlexibleRequest"
+                  type="checkbox"
+                />
+                Solicitar fuera del horario habitual
+              </label>
+
+              <textarea
+                className="min-h-28 rounded-3xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                name="notes"
+                placeholder="Notas para la cita o contexto importante"
+              />
+
+              <button
+                className="rounded-full bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                type="submit"
+              >
+                Solicitar cita
+              </button>
+            </form>
+          </div>
+
+          <div className="glass rounded-3xl p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+                Mis citas
+              </div>
+              <span className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
+                {user.appointments.length} registradas
+              </span>
+            </div>
+
+            <div className="mt-6 grid gap-4">
+              {user.appointments.length ? (
+                user.appointments.map((appointment) => (
+                  <article key={appointment.id} className="rounded-2xl border border-mist/20 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="text-base font-semibold text-white">
+                          {patientProfileCatalogs.appointmentType.find(
+                            (option) => option.value === appointment.type
+                          )?.label || appointment.type}
+                        </div>
+                        <div className="mt-1 text-sm text-[color:var(--text-soft)]">
+                          {formatDateTime(appointment.scheduledAt)} · {appointment.durationMinutes} min
+                        </div>
+                      </div>
+
+                      <div className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
+                        {patientProfileCatalogs.appointmentStatus.find(
+                          (option) => option.value === appointment.status
+                        )?.label || appointment.status}
+                      </div>
+                    </div>
+
+                    {appointment.notes ? (
+                      <p className="mt-3 text-sm text-[color:var(--text-soft)]">{appointment.notes}</p>
+                    ) : null}
+
+                    {appointment.requestedScheduledAt ? (
+                      <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                        Reprogramacion solicitada para {formatDateTime(appointment.requestedScheduledAt)}
+                        {appointment.requestedChangeNote ? ` · ${appointment.requestedChangeNote}` : ""}
+                      </div>
+                    ) : null}
+
+                    {appointment.status !== "COMPLETED" && appointment.status !== "MISSED" ? (
+                      <form
+                        action={requestAppointmentRescheduleAction}
+                        className="mt-4 grid gap-3 rounded-2xl border border-mist/15 bg-ink/30 p-4 md:grid-cols-[1fr_1fr]"
+                      >
+                        <input name="appointmentId" type="hidden" value={appointment.id} />
+                        <input
+                          className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                          name="requestedScheduledAt"
+                          required
+                          type="datetime-local"
+                        />
+                        <input
+                          className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                          name="requestedChangeNote"
+                          placeholder="Motivo o contexto de reprogramacion"
+                          type="text"
+                        />
+                        <button
+                          className="rounded-full border border-cyan-400/30 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-500/10 md:col-span-2"
+                          type="submit"
+                        >
+                          Solicitar reprogramacion
+                        </button>
+                      </form>
+                    ) : null}
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-mist/20 p-6 text-sm text-[color:var(--text-soft)]">
+                  Aun no tienes citas registradas.
+                </div>
+              )}
             </div>
           </div>
         </section>

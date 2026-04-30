@@ -3,9 +3,13 @@ import { PatientStatus, Prisma, UserRole } from "@prisma/client";
 
 import {
   archivePatientAction,
+  createAppointmentByAdminAction,
+  createAvailabilitySlotAction,
   createPatientByAdminAction,
+  deleteAvailabilitySlotAction,
   deletePatientAction,
-  logoutAction
+  logoutAction,
+  updateAppointmentStatusAction
 } from "@/app/auth-actions";
 import { patientProfileCatalogs } from "@/lib/patient-profile-catalogs";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +20,16 @@ function formatDate(value: Date) {
     day: "2-digit",
     month: "short",
     year: "numeric"
+  }).format(value);
+}
+
+function formatDateTime(value: Date) {
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
   }).format(value);
 }
 
@@ -80,7 +94,16 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       : {})
   };
 
-  const [adminUser, users, totalUsers, totalPatients, totalArchivedPatients, totalEntries] = await Promise.all([
+  const [
+    adminUser,
+    users,
+    totalUsers,
+    totalPatients,
+    totalArchivedPatients,
+    totalEntries,
+    availabilitySlots,
+    appointments
+  ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId }
     }),
@@ -111,7 +134,30 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         }
       }
     }),
-    prisma.progressEntry.count()
+    prisma.progressEntry.count(),
+    prisma.availabilitySlot.findMany({
+      where: { isActive: true },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }]
+    }),
+    prisma.appointment.findMany({
+      include: {
+        user: {
+          select: {
+            fullName: true,
+            email: true,
+            profile: {
+              select: {
+                patientCode: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        scheduledAt: "asc"
+      },
+      take: 8
+    })
   ]);
 
   if (!adminUser) {
@@ -570,6 +616,237 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
               ) : (
                 <div className="rounded-2xl border border-dashed border-mist/20 p-6 text-sm text-[color:var(--text-soft)]">
                   Aun no hay usuarios registrados.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
+          <div className="glass rounded-3xl p-6">
+            <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+              Disponibilidad semanal
+            </div>
+            <p className="mt-3 text-sm text-[color:var(--text-soft)]">
+              Define tus bloques base de atencion para citas virtuales o llamadas.
+            </p>
+
+            <form action={createAvailabilitySlotAction} className="mt-6 grid gap-3">
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                defaultValue=""
+                name="dayOfWeek"
+                required
+              >
+                <option disabled value="">
+                  Dia de la semana
+                </option>
+                {patientProfileCatalogs.weekDay.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                  name="startTime"
+                  required
+                  type="time"
+                />
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                  name="endTime"
+                  required
+                  type="time"
+                />
+              </div>
+
+              <button
+                className="rounded-full bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                type="submit"
+              >
+                Agregar disponibilidad
+              </button>
+            </form>
+
+            <div className="mt-6 grid gap-3">
+              {availabilitySlots.length ? (
+                availabilitySlots.map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mist/20 p-4"
+                  >
+                    <div className="text-sm text-white">
+                      {
+                        patientProfileCatalogs.weekDay.find((option) => option.value === slot.dayOfWeek)
+                          ?.label
+                      }
+                      : {slot.startTime} - {slot.endTime}
+                    </div>
+                    <form action={deleteAvailabilitySlotAction}>
+                      <input name="slotId" type="hidden" value={slot.id} />
+                      <button
+                        className="rounded-full border border-rose-400/30 px-4 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-300 hover:bg-rose-500/10"
+                        type="submit"
+                      >
+                        Quitar
+                      </button>
+                    </form>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-mist/20 p-4 text-sm text-[color:var(--text-soft)]">
+                  Todavia no has definido disponibilidad base.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="glass rounded-3xl p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+                Agenda y citas
+              </div>
+              <span className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
+                {appointments.length} proximas / recientes
+              </span>
+            </div>
+
+            <form
+              action={createAppointmentByAdminAction}
+              className="mt-6 grid gap-3 rounded-2xl border border-mist/15 bg-ink/30 p-4 md:grid-cols-2"
+            >
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow md:col-span-2"
+                defaultValue=""
+                name="userId"
+                required
+              >
+                <option disabled value="">
+                  Selecciona un paciente
+                </option>
+                {users
+                  .filter((user) => user.role === UserRole.PATIENT)
+                  .map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {(user.profile?.patientCode || "Sin ID") + " · " + user.fullName}
+                    </option>
+                  ))}
+              </select>
+
+              <select
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                defaultValue=""
+                name="type"
+                required
+              >
+                <option disabled value="">
+                  Tipo de cita
+                </option>
+                {patientProfileCatalogs.appointmentType.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                className="rounded-2xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                name="scheduledAt"
+                required
+                type="datetime-local"
+              />
+
+              <label className="flex items-center gap-3 text-sm text-[color:var(--text-soft)] md:col-span-2">
+                <input
+                  className="h-4 w-4 rounded border-mist/30 bg-ink/60 text-glow focus:ring-glow"
+                  name="isFlexibleRequest"
+                  type="checkbox"
+                />
+                Cita flexible o fuera de horario
+              </label>
+
+              <textarea
+                className="min-h-28 rounded-3xl border border-mist/25 bg-ink/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow md:col-span-2"
+                name="notes"
+                placeholder="Notas internas de la cita"
+              />
+
+              <button
+                className="rounded-full bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px] md:col-span-2"
+                type="submit"
+              >
+                Crear cita
+              </button>
+            </form>
+
+            <div className="mt-6 grid gap-4">
+              {appointments.length ? (
+                appointments.map((appointment) => (
+                  <article key={appointment.id} className="rounded-2xl border border-mist/20 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="text-base font-semibold text-white">
+                          {appointment.user.fullName}
+                        </div>
+                        <div className="mt-1 text-sm text-[color:var(--text-soft)]">
+                          {appointment.user.profile?.patientCode || "Sin ID"} · {appointment.user.email}
+                        </div>
+                      </div>
+                      <div className="rounded-full border border-mist/20 px-3 py-1 text-xs text-[color:var(--text-soft)]">
+                        {patientProfileCatalogs.appointmentStatus.find(
+                          (option) => option.value === appointment.status
+                        )?.label || appointment.status}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-sm text-[color:var(--text-soft)] md:grid-cols-3">
+                      <div>
+                        Tipo:{" "}
+                        {patientProfileCatalogs.appointmentType.find(
+                          (option) => option.value === appointment.type
+                        )?.label || appointment.type}
+                      </div>
+                      <div>Fecha: {formatDateTime(appointment.scheduledAt)}</div>
+                      <div>Duracion: {appointment.durationMinutes} min</div>
+                    </div>
+
+                    {appointment.requestedScheduledAt ? (
+                      <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                        Reprogramacion solicitada para {formatDateTime(appointment.requestedScheduledAt)}
+                        {appointment.requestedChangeNote ? ` · ${appointment.requestedChangeNote}` : ""}
+                      </div>
+                    ) : null}
+
+                    {appointment.notes ? (
+                      <p className="mt-3 text-sm text-[color:var(--text-soft)]">{appointment.notes}</p>
+                    ) : null}
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {[
+                        { value: "CONFIRMED", label: "Confirmar" },
+                        { value: "COMPLETED", label: "Completar" },
+                        { value: "MISSED", label: "No asistio" }
+                      ].map((statusOption) => (
+                        <form key={statusOption.value} action={updateAppointmentStatusAction}>
+                          <input name="appointmentId" type="hidden" value={appointment.id} />
+                          <input name="status" type="hidden" value={statusOption.value} />
+                          <button
+                            className="rounded-full border border-cyan-400/30 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-500/10"
+                            type="submit"
+                          >
+                            {statusOption.label}
+                          </button>
+                        </form>
+                      ))}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-mist/20 p-6 text-sm text-[color:var(--text-soft)]">
+                  Todavia no hay citas registradas.
                 </div>
               )}
             </div>

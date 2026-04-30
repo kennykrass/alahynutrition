@@ -32,5 +32,28 @@ export const patientProfileCatalogs = {
     { value: "INDICATION", label: "Indicacion" },
     { value: "RECIPE", label: "Receta" },
     { value: "PREVIOUS_PLAN", label: "Plan anterior" }
+  ],
+  appointmentType: [
+    { value: "INITIAL", label: "Inicial" },
+    { value: "FOLLOW_UP", label: "Seguimiento" },
+    { value: "RESTART", label: "Recomienzo" },
+    { value: "VIDEO_CALL", label: "Videollamada" },
+    { value: "PHONE_CALL", label: "Llamada normal" }
+  ],
+  appointmentStatus: [
+    { value: "REQUESTED", label: "Solicitada" },
+    { value: "CONFIRMED", label: "Confirmada" },
+    { value: "RESCHEDULE_REQUESTED", label: "Reprogramacion solicitada" },
+    { value: "COMPLETED", label: "Completada" },
+    { value: "MISSED", label: "No asistio" }
+  ],
+  weekDay: [
+    { value: "MONDAY", label: "Lunes" },
+    { value: "TUESDAY", label: "Martes" },
+    { value: "WEDNESDAY", label: "Miercoles" },
+    { value: "THURSDAY", label: "Jueves" },
+    { value: "FRIDAY", label: "Viernes" },
+    { value: "SATURDAY", label: "Sabado" },
+    { value: "SUNDAY", label: "Domingo" }
   ]
 } as const;

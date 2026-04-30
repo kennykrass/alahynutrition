@@ -52,6 +52,32 @@ enum PatientDocumentCategory {
   PREVIOUS_PLAN
 }
 
+enum AppointmentType {
+  INITIAL
+  FOLLOW_UP
+  RESTART
+  VIDEO_CALL
+  PHONE_CALL
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  RESCHEDULE_REQUESTED
+  COMPLETED
+  MISSED
+}
+
+enum WeekDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
 model User {
   id           String         @id @default(cuid())
   fullName     String
@@ -64,6 +90,7 @@ model User {
   profile      PatientProfile?
   entries      ProgressEntry[]
   documents    PatientDocument[]
+  appointments Appointment[]
 }
 
 model PatientProfile {
@@ -123,4 +150,36 @@ model PatientDocument {
   user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, category, createdAt(sort: Desc)])
+}
+
+model Appointment {
+  id                    String             @id @default(cuid())
+  userId                String
+  type                  AppointmentType
+  status                AppointmentStatus  @default(REQUESTED)
+  scheduledAt           DateTime
+  durationMinutes       Int
+  notes                 String?
+  isFlexibleRequest     Boolean            @default(false)
+  requestedScheduledAt  DateTime?
+  requestedChangeNote   String?
+  createdByRole         UserRole
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scheduledAt(sort: Desc)])
+  @@index([status, scheduledAt(sort: Asc)])
+}
+
+model AvailabilitySlot {
+  id                    String   @id @default(cuid())
+  dayOfWeek             WeekDay
+  startTime             String
+  endTime               String
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([dayOfWeek, isActive])
 }

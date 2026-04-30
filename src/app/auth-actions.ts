@@ -1,12 +1,15 @@
 "use server";
 
 import {
+  AppointmentStatus,
+  AppointmentType,
   CareType,
   PatientDocumentCategory,
   PatientStatus,
   PlanDuration,
   Prisma,
-  UserRole
+  UserRole,
+  WeekDay
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
@@ -25,8 +28,13 @@ import {
 import {
   adminPatientCreateSchema,
   adminPatientUpdateSchema,
+  adminAppointmentCreateSchema,
+  appointmentRescheduleRequestSchema,
+  appointmentStatusUpdateSchema,
+  availabilitySlotSchema,
   changePasswordSchema,
   loginSchema,
+  patientAppointmentRequestSchema,
   registerSchema
 } from "@/lib/validations";
 
@@ -98,6 +106,28 @@ function generateTemporaryPassword() {
   }
 
   return `Alahy${raw}9`;
+}
+
+function parseDateTimeLocal(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getAppointmentDuration(type: AppointmentType) {
+  switch (type) {
+    case AppointmentType.INITIAL:
+      return 75;
+    case AppointmentType.FOLLOW_UP:
+      return 40;
+    case AppointmentType.RESTART:
+      return 40;
+    case AppointmentType.VIDEO_CALL:
+      return 40;
+    case AppointmentType.PHONE_CALL:
+      return 30;
+    default:
+      return 40;
+  }
 }
 
 function redirectToPatientEditorWithError(userId: string, message: string): never {
@@ -529,6 +559,194 @@ export async function deletePatientDocumentAction(formData: FormData) {
   revalidatePath(`/admin/patients/${userId}`);
   revalidatePath("/patient");
   redirectToPatientEditorWithSuccess(userId, "Documento eliminado correctamente.");
+}
+
+export async function createAvailabilitySlotAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const result = availabilitySlotSchema.safeParse({
+    dayOfWeek: getField(formData, "dayOfWeek"),
+    startTime: getField(formData, "startTime"),
+    endTime: getField(formData, "endTime")
+  });
+
+  if (!result.success) {
+    redirect(`/admin?error=${encodeURIComponent(result.error.issues[0]?.message ?? "No pudimos guardar la disponibilidad.")}`);
+  }
+
+  const parsed = result.data;
+
+  await prisma.availabilitySlot.create({
+    data: {
+      dayOfWeek: parsed.dayOfWeek as WeekDay,
+      startTime: parsed.startTime,
+      endTime: parsed.endTime
+    }
+  });
+
+  revalidatePath("/admin");
+  redirect("/admin?success=Disponibilidad%20guardada%20correctamente.");
+}
+
+export async function deleteAvailabilitySlotAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const slotId = getField(formData, "slotId");
+
+  if (!slotId) {
+    redirect("/admin?error=No%20pudimos%20identificar%20el%20bloque%20de%20disponibilidad.");
+  }
+
+  await prisma.availabilitySlot.deleteMany({
+    where: { id: slotId }
+  });
+
+  revalidatePath("/admin");
+  redirect("/admin?success=Disponibilidad%20eliminada%20correctamente.");
+}
+
+export async function createAppointmentByAdminAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const result = adminAppointmentCreateSchema.safeParse({
+    userId: getField(formData, "userId"),
+    type: getField(formData, "type"),
+    scheduledAt: getField(formData, "scheduledAt"),
+    notes: getOptionalField(formData, "notes"),
+    isFlexibleRequest: formData.get("isFlexibleRequest") === "on"
+  });
+
+  if (!result.success) {
+    redirect(`/admin?error=${encodeURIComponent(result.error.issues[0]?.message ?? "No pudimos crear la cita.")}`);
+  }
+
+  const parsed = result.data;
+  const scheduledAt = parseDateTimeLocal(parsed.scheduledAt);
+
+  if (!scheduledAt) {
+    redirect("/admin?error=La%20fecha%20y%20hora%20de%20la%20cita%20no%20es%20valida.");
+  }
+
+  await prisma.appointment.create({
+    data: {
+      userId: parsed.userId,
+      type: parsed.type,
+      status: AppointmentStatus.CONFIRMED,
+      scheduledAt,
+      durationMinutes: getAppointmentDuration(parsed.type),
+      notes: parsed.notes,
+      isFlexibleRequest: parsed.isFlexibleRequest ?? false,
+      createdByRole: UserRole.ADMIN
+    }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/patient");
+  redirect("/admin?success=Cita%20creada%20correctamente.");
+}
+
+export async function requestAppointmentAction(formData: FormData) {
+  const session = await requireRole(UserRole.PATIENT);
+
+  const result = patientAppointmentRequestSchema.safeParse({
+    type: getField(formData, "type"),
+    scheduledAt: getField(formData, "scheduledAt"),
+    notes: getOptionalField(formData, "notes"),
+    isFlexibleRequest: formData.get("isFlexibleRequest") === "on"
+  });
+
+  if (!result.success) {
+    redirect(`/patient?error=${encodeURIComponent(result.error.issues[0]?.message ?? "No pudimos solicitar la cita.")}`);
+  }
+
+  const parsed = result.data;
+  const scheduledAt = parseDateTimeLocal(parsed.scheduledAt);
+
+  if (!scheduledAt) {
+    redirect("/patient?error=La%20fecha%20y%20hora%20solicitada%20no%20es%20valida.");
+  }
+
+  await prisma.appointment.create({
+    data: {
+      userId: session.userId,
+      type: parsed.type,
+      status: AppointmentStatus.REQUESTED,
+      scheduledAt,
+      durationMinutes: getAppointmentDuration(parsed.type),
+      notes: parsed.notes,
+      isFlexibleRequest: parsed.isFlexibleRequest ?? false,
+      createdByRole: UserRole.PATIENT
+    }
+  });
+
+  revalidatePath("/patient");
+  revalidatePath("/admin");
+  redirect("/patient?success=Cita%20solicitada%20correctamente.");
+}
+
+export async function updateAppointmentStatusAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const result = appointmentStatusUpdateSchema.safeParse({
+    appointmentId: getField(formData, "appointmentId"),
+    status: getField(formData, "status")
+  });
+
+  if (!result.success) {
+    redirect(`/admin?error=${encodeURIComponent(result.error.issues[0]?.message ?? "No pudimos actualizar la cita.")}`);
+  }
+
+  const parsed = result.data;
+
+  await prisma.appointment.update({
+    where: { id: parsed.appointmentId },
+    data: {
+      status: parsed.status,
+      requestedScheduledAt: null,
+      requestedChangeNote: null
+    }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/patient");
+  redirect("/admin?success=Estatus%20de%20cita%20actualizado.");
+}
+
+export async function requestAppointmentRescheduleAction(formData: FormData) {
+  const session = await requireRole(UserRole.PATIENT);
+
+  const result = appointmentRescheduleRequestSchema.safeParse({
+    appointmentId: getField(formData, "appointmentId"),
+    requestedScheduledAt: getField(formData, "requestedScheduledAt"),
+    requestedChangeNote: getOptionalField(formData, "requestedChangeNote")
+  });
+
+  if (!result.success) {
+    redirect(`/patient?error=${encodeURIComponent(result.error.issues[0]?.message ?? "No pudimos solicitar la reprogramacion.")}`);
+  }
+
+  const parsed = result.data;
+  const requestedScheduledAt = parseDateTimeLocal(parsed.requestedScheduledAt);
+
+  if (!requestedScheduledAt) {
+    redirect("/patient?error=La%20nueva%20fecha%20solicitada%20no%20es%20valida.");
+  }
+
+  await prisma.appointment.updateMany({
+    where: {
+      id: parsed.appointmentId,
+      userId: session.userId
+    },
+    data: {
+      status: AppointmentStatus.RESCHEDULE_REQUESTED,
+      requestedScheduledAt,
+      requestedChangeNote: parsed.requestedChangeNote
+    }
+  });
+
+  revalidatePath("/patient");
+  revalidatePath("/admin");
+  redirect("/patient?success=Reprogramacion%20solicitada%20correctamente.");
 }
 
 export async function updatePatientAction(formData: FormData) {
