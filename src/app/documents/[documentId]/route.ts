@@ -36,7 +36,7 @@ export async function GET(_request: Request, { params }: DocumentRouteContext) {
     return new NextResponse("No autorizado.", { status: 403 });
   }
 
-  return new NextResponse(Buffer.from(document.fileData), {
+  return new NextResponse(new Uint8Array(document.fileData), {
     status: 200,
     headers: {
       "Content-Type": document.mimeType,

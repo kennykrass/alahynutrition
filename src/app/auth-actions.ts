@@ -519,7 +519,7 @@ export async function uploadPatientDocumentAction(formData: FormData) {
     redirect("/admin?error=Solo%20puedes%20adjuntar%20documentos%20a%20pacientes%20validos.");
   }
 
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const fileBuffer = new Uint8Array(await file.arrayBuffer());
 
   await prisma.patientDocument.create({
     data: {
