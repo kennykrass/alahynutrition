@@ -200,6 +200,12 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
             >
               Recetas por equivalentes
             </Link>
+            <Link
+              className="rounded-full border border-mist/30 px-5 py-3 text-sm text-white transition hover:border-white"
+              href="/admin/food-catalog"
+            >
+              Catalogo de alimentos
+            </Link>
             <form action={logoutAction}>
               <button
                 className="rounded-full bg-glow px-5 py-3 text-sm font-semibold text-ink shadow-glow"

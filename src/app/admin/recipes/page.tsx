@@ -7,6 +7,7 @@ import {
   parseEquivalentTargets,
   scoreRecipeMatch
 } from "@/lib/recipe-matching";
+import { formatCatalogNumber, getFoodCatalogGroupLabel } from "@/lib/food-catalog";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 
@@ -87,6 +88,18 @@ export default async function RecipeEquivalentsPage({ searchParams }: RecipeEqui
     .sort((left, right) => right.match.score - left.match.score || left.match.distance - right.match.distance);
 
   const selectedSummary = foodGroups.filter((group) => (targets[group.slug] ?? 0) > 0);
+  const selectedCatalogSlugs = selectedSummary.map((group) => group.slug);
+  const catalogItems = selectedCatalogSlugs.length
+    ? await prisma.foodCatalogItem.findMany({
+        where: {
+          groupSlug: {
+            in: selectedCatalogSlugs
+          }
+        },
+        orderBy: [{ groupSlug: "asc" }, { foodName: "asc" }],
+        take: 42
+      })
+    : [];
 
   return (
     <main className="px-6 py-8 md:px-12">
@@ -111,6 +124,12 @@ export default async function RecipeEquivalentsPage({ searchParams }: RecipeEqui
               href="/admin"
             >
               Volver al panel
+            </Link>
+            <Link
+              className="rounded-full border border-mist/30 px-5 py-3 text-sm text-white transition hover:border-white"
+              href="/admin/food-catalog"
+            >
+              Ver catalogo
             </Link>
             <Link
               className="rounded-full bg-glow px-5 py-3 text-sm font-semibold text-ink shadow-glow"
@@ -207,6 +226,46 @@ export default async function RecipeEquivalentsPage({ searchParams }: RecipeEqui
                 Buscar recetas
               </button>
             </form>
+
+            <div className="mt-6 rounded-3xl border border-mist/20 bg-ink/35 p-4">
+              <div className="text-sm font-semibold text-white">
+                Porciones reales del catalogo
+              </div>
+              <p className="mt-2 text-sm text-[color:var(--text-soft)]">
+                Muestra alimentos SMAE de los grupos que seleccionaste. Esto ayuda a aterrizar cada
+                equivalente en porciones reales.
+              </p>
+
+              <div className="mt-4 grid max-h-[34rem] gap-3 overflow-y-auto pr-1">
+                {catalogItems.length ? (
+                  catalogItems.map((item) => (
+                    <article className="rounded-2xl border border-mist/15 bg-white/5 p-3" key={item.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-white">{item.foodName}</div>
+                          <div className="mt-1 text-xs text-[color:var(--text-soft)]">
+                            {getFoodCatalogGroupLabel(item.groupSlug)}
+                          </div>
+                        </div>
+                        <div className="shrink-0 rounded-full border border-mist/20 px-3 py-1 text-xs text-white">
+                          {[item.suggestedAmount, item.unit].filter(Boolean).join(" ") || "ND"}
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs text-[color:var(--text-soft)]">
+                        <span>{formatCatalogNumber(item.energyKcal)} kcal</span>
+                        <span>{formatCatalogNumber(item.proteinG, " g")} P</span>
+                        <span>{formatCatalogNumber(item.lipidsG, " g")} L</span>
+                        <span>{formatCatalogNumber(item.carbsG, " g")} C</span>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-mist/20 p-4 text-sm text-[color:var(--text-soft)]">
+                    Selecciona equivalentes para ver porciones del catalogo.
+                  </div>
+                )}
+              </div>
+            </div>
           </aside>
 
           <section className="glass rounded-3xl p-6">
