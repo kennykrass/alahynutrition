@@ -225,3 +225,26 @@ model RecipeEquivalent {
   @@unique([recipeId, foodGroupId])
   @@index([foodGroupId])
 }
+
+model FoodCatalogItem {
+  id              String   @id @default(cuid())
+  source          String
+  sourcePage      Int
+  groupName       String
+  groupSlug       String
+  foodName        String
+  suggestedAmount String?
+  unit            String?
+  grossWeightG    Float?
+  netWeightG      Float?
+  energyKcal      Float?
+  proteinG        Float?
+  lipidsG         Float?
+  carbsG          Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([source, sourcePage, foodName, suggestedAmount, unit])
+  @@index([groupSlug])
+  @@index([foodName])
+}

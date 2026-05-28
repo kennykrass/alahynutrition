@@ -14,6 +14,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.next-dev.*
+.tools/
+
+# generated local catalog extraction artifacts
+/data/
 
 # local env
 .env*.local
