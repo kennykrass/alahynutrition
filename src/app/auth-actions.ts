@@ -605,6 +605,66 @@ export async function deleteAvailabilitySlotAction(formData: FormData) {
   redirect("/admin?success=Disponibilidad%20eliminada%20correctamente.");
 }
 
+export async function createRecipeAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const title = getField(formData, "title").trim();
+  const mealType = getField(formData, "mealType").trim();
+  const description = getField(formData, "description").trim();
+  const imageUrl = getOptionalField(formData, "imageUrl");
+  const prepMinutes = Number(getField(formData, "prepMinutes"));
+
+  if (!title || title.length < 4) {
+    redirect("/admin/recipes?error=Escribe%20un%20nombre%20claro%20para%20la%20receta.");
+  }
+
+  if (!mealType) {
+    redirect("/admin/recipes?error=Selecciona%20el%20tiempo%20de%20comida.");
+  }
+
+  if (!description || description.length < 8) {
+    redirect("/admin/recipes?error=Agrega%20una%20descripcion%20breve%20de%20la%20receta.");
+  }
+
+  if (!Number.isFinite(prepMinutes) || prepMinutes < 1 || prepMinutes > 240) {
+    redirect("/admin/recipes?error=El%20tiempo%20de%20preparacion%20debe%20ser%20valido.");
+  }
+
+  const foodGroups = await prisma.foodGroup.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      slug: true
+    }
+  });
+  const equivalents = foodGroups
+    .map((group) => ({
+      foodGroupId: group.id,
+      amount: Number(getField(formData, `equivalent_${group.slug}`))
+    }))
+    .filter((equivalent) => Number.isFinite(equivalent.amount) && equivalent.amount > 0);
+
+  if (!equivalents.length) {
+    redirect("/admin/recipes?error=Agrega%20al%20menos%20un%20equivalente%20a%20la%20receta.");
+  }
+
+  await prisma.recipe.create({
+    data: {
+      title,
+      mealType,
+      description,
+      imageUrl,
+      prepMinutes,
+      equivalents: {
+        create: equivalents
+      }
+    }
+  });
+
+  revalidatePath("/admin/recipes");
+  redirect(`/admin/recipes?mealType=${encodeURIComponent(mealType)}&success=Receta%20guardada%20correctamente.`);
+}
+
 export async function createAppointmentByAdminAction(formData: FormData) {
   await requireRole(UserRole.ADMIN);
 

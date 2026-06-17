@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
+import { createRecipeAction } from "@/app/auth-actions";
 import {
   getRecipeEquivalentMap,
   mealTypeOptions,
@@ -140,6 +141,18 @@ export default async function RecipeEquivalentsPage({ searchParams }: RecipeEqui
           </div>
         </header>
 
+        {typeof searchParams?.success === "string" ? (
+          <div className="mt-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
+            {searchParams.success}
+          </div>
+        ) : null}
+
+        {typeof searchParams?.error === "string" ? (
+          <div className="mt-8 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-100">
+            {searchParams.error}
+          </div>
+        ) : null}
+
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
           <aside className="glass rounded-3xl p-6">
             <form className="grid gap-6">
@@ -265,6 +278,78 @@ export default async function RecipeEquivalentsPage({ searchParams }: RecipeEqui
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-mist/20 bg-ink/35 p-4">
+              <div className="text-sm font-semibold text-white">Crear receta base</div>
+              <p className="mt-2 text-sm text-[color:var(--text-soft)]">
+                Guarda una receta con sus equivalentes para que aparezca en las sugerencias.
+              </p>
+
+              <form action={createRecipeAction} className="mt-4 grid gap-3">
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  name="title"
+                  placeholder="Nombre de la receta"
+                  required
+                  type="text"
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    className="rounded-2xl border border-mist/25 bg-ink/70 px-4 py-3 text-sm text-white outline-none transition focus:border-glow"
+                    defaultValue={selectedMealType}
+                    name="mealType"
+                    required
+                  >
+                    {mealTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="rounded-2xl border border-mist/25 bg-ink/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                    defaultValue="15"
+                    min="1"
+                    name="prepMinutes"
+                    placeholder="Minutos"
+                    required
+                    type="number"
+                  />
+                </div>
+                <textarea
+                  className="min-h-24 rounded-3xl border border-mist/25 bg-ink/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  name="description"
+                  placeholder="Descripcion breve"
+                  required
+                />
+                <input
+                  className="rounded-2xl border border-mist/25 bg-ink/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                  name="imageUrl"
+                  placeholder="URL de imagen opcional"
+                  type="url"
+                />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {foodGroups.map((group) => (
+                    <label className="rounded-2xl border border-mist/15 bg-white/5 p-3" key={group.id}>
+                      <span className="block text-xs text-[color:var(--text-soft)]">{group.shortName}</span>
+                      <input
+                        className="mt-2 w-full rounded-xl border border-mist/20 bg-ink/70 px-3 py-2 text-right text-sm text-white outline-none focus:border-glow"
+                        min="0"
+                        name={`equivalent_${group.slug}`}
+                        step="0.5"
+                        type="number"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <button
+                  className="rounded-full bg-glow px-4 py-3 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                  type="submit"
+                >
+                  Guardar receta
+                </button>
+              </form>
             </div>
           </aside>
 
