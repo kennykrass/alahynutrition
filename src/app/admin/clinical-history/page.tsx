@@ -11,6 +11,7 @@ import {
   getIndicatorPercent,
   gynecologicalRows
 } from "@/lib/clinical-history";
+import { ensureClinicalDemoPatient } from "@/lib/clinical-demo-patient";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 
@@ -232,6 +233,7 @@ function ProgressChart({
 
 export default async function ClinicalHistoryPage({ searchParams }: ClinicalHistoryPageProps) {
   await requireRole(UserRole.ADMIN);
+  await ensureClinicalDemoPatient();
 
   const patients = await prisma.user.findMany({
     where: {

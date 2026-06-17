@@ -3,11 +3,9 @@
 import {
   AppointmentStatus,
   AppointmentType,
-  BiologicalSex,
   CareType,
   PatientDocumentCategory,
   PatientStatus,
-  PhysicalActivityLevel,
   PlanDuration,
   Prisma,
   UserRole,
@@ -27,6 +25,7 @@ import {
   requireUser,
   requireRole
 } from "@/lib/session";
+import { ensureClinicalDemoPatient } from "@/lib/clinical-demo-patient";
 import {
   adminPatientCreateSchema,
   adminPatientUpdateSchema,
@@ -294,59 +293,7 @@ export async function logoutAction() {
 export async function createClinicalDemoPatientAction() {
   await requireRole(UserRole.ADMIN);
 
-  const email = "demo.clinico@alahynutrition.com";
-
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: {},
-    create: {
-      fullName: "Erick Leija Arriaga",
-      email,
-      passwordHash: await bcrypt.hash("AlahyDemo123", 12),
-      mustChangePassword: true,
-      role: UserRole.PATIENT,
-      profile: {
-        create: {
-          patientCode: "DEMO-CLINICO",
-          phone: "81 0000 0000",
-          birthDate: new Date("1995-06-17T00:00:00"),
-          biologicalSex: BiologicalSex.MALE,
-          heightCm: 163,
-          initialWeightKg: 76,
-          currentWeightKg: 76,
-          previousDietExperience: true,
-          previousDietDuration: "3 meses con plan general.",
-          physicalActivityLevel: PhysicalActivityLevel.LIGHT,
-          status: PatientStatus.ACTIVE,
-          careType: CareType.INITIAL,
-          planDuration: PlanDuration.THREE_MONTHS,
-          medications: "Multivitaminico ocasional",
-          foodAllergies: "Sin alergias reportadas",
-          goal: "Disminuir peso",
-          notes: JSON.stringify({
-            disease: "Sin diagnostico cronico reportado",
-            medicationNameDose: "Multivitaminico ocasional",
-            alcohol: "Social, 1 vez por semana",
-            tobacco: "No",
-            generalCondition: "Aspecto general normal",
-            comments: "Paciente demo para visualizar y editar historia clinica."
-          })
-        }
-      },
-      entries: {
-        create: {
-          loggedAt: new Date("2026-06-17T12:00:00"),
-          weightKg: 76,
-          waistCm: 100,
-          bodyFatPct: 21,
-          notes: "Registro inicial demo"
-        }
-      }
-    },
-    include: {
-      profile: true
-    }
-  });
+  const user = await ensureClinicalDemoPatient();
 
   revalidatePath("/admin");
   revalidatePath("/admin/clinical-history");
