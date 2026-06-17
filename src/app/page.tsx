@@ -38,7 +38,7 @@ export default function Home() {
       </div>
 
       <header className="px-6 pt-4 md:px-12">
-        <div className="mx-auto flex max-w-6xl items-start justify-between px-1 pb-0">
+        <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-start gap-6 px-1 pb-0">
           <Link
             aria-label="Ir al inicio de Alahy Nutrition"
             className="relative h-40 w-44 shrink-0 transition md:h-52 md:w-60"
@@ -53,6 +53,22 @@ export default function Home() {
               src="/logoalat.png"
             />
           </Link>
+          <div className="hidden justify-center pt-10 md:flex">
+            <div className="glass flex items-center gap-3 rounded-full border border-mist/20 bg-ink/55 p-2">
+              <Link
+                className="rounded-full border border-mist/30 px-5 py-2 text-sm font-semibold text-white transition hover:border-white hover:bg-white/5"
+                href="/login"
+              >
+                Ingresar
+              </Link>
+              <Link
+                className="rounded-full bg-glow px-5 py-2 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                href="/register"
+              >
+                Registrarse
+              </Link>
+            </div>
+          </div>
           <nav className="hidden gap-6 pt-0 text-sm text-[color:var(--text-soft)] md:flex">
             <a className="transition hover:text-white" href="#servicios">
               Servicios
@@ -60,9 +76,6 @@ export default function Home() {
             <a className="transition hover:text-white" href="#contacto">
               Contacto
             </a>
-            <Link className="transition hover:text-white" href="/login">
-              Portal
-            </Link>
           </nav>
         </div>
       </header>
