@@ -25,28 +25,6 @@ const services = [
   }
 ];
 
-const steps = [
-  {
-    title: "Diagnostico",
-    detail: "Datos clinicos, habitos y objetivos reales."
-  },
-  {
-    title: "Plan hecho a medida",
-    detail: "Menus, porciones y metas semanales."
-  },
-  {
-    title: "Acompanamiento",
-    detail: "Revision de avances y ajustes continuos."
-  }
-];
-
-const expectations = [
-  "Panel de paciente con registro y actualizacion de datos",
-  "Graficas de progreso y recordatorios",
-  "Material educativo y recetas",
-  "Historial de consultas y recomendaciones"
-];
-
 const whatsappHref =
   "https://wa.me/528113282818?text=Hola%2C%20quiero%20informacion%20sobre%20una%20consulta%20en%20Alahy%20Nutrition";
 
@@ -79,12 +57,6 @@ export default function Home() {
             <a className="transition hover:text-white" href="#servicios">
               Servicios
             </a>
-            <a className="transition hover:text-white" href="#metodo">
-              Metodo
-            </a>
-            <a className="transition hover:text-white" href="#futuro">
-              Plataforma
-            </a>
             <a className="transition hover:text-white" href="#contacto">
               Contacto
             </a>
@@ -95,13 +67,13 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="px-6 pb-16 pt-2 md:px-12">
-        <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-[1.1fr_0.9fr] md:items-start">
+      <section className="px-6 pb-20 pt-2 md:px-12">
+        <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-[1.02fr_0.98fr] md:items-center">
           <div className="space-y-6">
             <div className="glass inline-flex items-center gap-3 rounded-full px-4 py-2 text-xs uppercase tracking-[0.3em] text-[color:var(--text-soft)]">
               Nutricion clinica y deportiva
             </div>
-            <h1 className="font-[var(--font-display)] text-4xl leading-tight md:text-6xl">
+            <h1 className="max-w-2xl font-[var(--font-display)] text-4xl leading-tight md:text-6xl">
               Planes nutricionales precisos para cambios reales
             </h1>
             <p className="max-w-xl text-lg text-[color:var(--text-soft)]">
@@ -130,10 +102,10 @@ export default function Home() {
                 Registro de pacientes
               </Link>
             </div>
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid max-w-2xl gap-4 sm:grid-cols-3">
               {stats.map((stat) => (
-                <div key={stat.label} className="glass rounded-2xl px-4 py-5">
-                  <div className="text-2xl font-semibold text-white">
+                <div key={stat.label} className="rounded-2xl border border-mist/20 bg-white/5 px-4 py-4">
+                  <div className="text-xl font-semibold text-white">
                     {stat.value}
                   </div>
                   <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
@@ -143,58 +115,58 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div className="glass relative overflow-hidden rounded-3xl p-8 md:-mt-28">
+          <div className="glass relative overflow-hidden rounded-3xl p-6 md:p-8">
             <div className="absolute -bottom-6 -left-6 h-28 w-28 rounded-3xl border border-mist/30 opacity-40" />
-            <div className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-start">
-                <div className="space-y-4">
-                  <h2 className="font-[var(--font-display)] text-3xl">
+            <div className="grid gap-8 md:grid-cols-[1fr_0.86fr] md:items-center">
+              <div className="space-y-5">
+                <div>
+                  <h2 className="font-[var(--font-display)] text-2xl md:text-3xl">
                     Consulta con direccion y seguimiento constante
                   </h2>
-                  <p className="text-[color:var(--text-soft)]">
+                  <p className="mt-4 text-[color:var(--text-soft)]">
                     Tu plan es flexible, medible y hecho con datos reales para que
                     puedas sostener resultados en el tiempo.
                   </p>
                 </div>
-                <div className="relative mx-auto w-full max-w-[220px]">
-                  <div className="absolute inset-0 rounded-[2rem] bg-glow/20 blur-2xl" />
-                  <div className="glass relative overflow-hidden rounded-[2rem] border border-mist/30 p-2">
-                    <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
-                      <Image
-                        alt="Erick David Alahy Rios Cervantes"
-                        className="object-cover object-center"
-                        fill
-                        priority
-                        sizes="(max-width: 768px) 220px, 240px"
-                        src="/erick-alahy.jpg"
-                      />
+                <div className="grid gap-3">
+                  <div className="rounded-2xl border border-mist/25 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
+                      Evaluacion inicial
+                    </div>
+                    <div className="mt-2 text-lg font-semibold">
+                      Diagnostico y objetivos claros
                     </div>
                   </div>
-                  <div className="mt-4 text-center">
-                    <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
-                      Lic en Nutricion David Rios
+                  <div className="rounded-2xl border border-mist/25 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
+                      Seguimiento
                     </div>
-                    <div className="mt-1 text-sm font-medium text-white">
-                      Nutricion clinica y deportiva
+                    <div className="mt-2 text-lg font-semibold">
+                      Ajustes medibles y sostenibles
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-mist/30 p-4">
-                  <div className="text-sm uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
-                    Evaluacion inicial
-                  </div>
-                  <div className="mt-2 text-xl font-semibold">
-                    60 minutos de diagnostico y objetivos
+              <div className="relative mx-auto w-full max-w-[220px]">
+                <div className="absolute inset-0 rounded-[2rem] bg-glow/20 blur-2xl" />
+                <div className="glass relative overflow-hidden rounded-[2rem] border border-mist/30 p-2">
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
+                    <Image
+                      alt="Erick David Alahy Rios Cervantes"
+                      className="object-cover object-center"
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 220px, 240px"
+                      src="/erick-alahy.jpg"
+                    />
                   </div>
                 </div>
-                <div className="rounded-2xl border border-mist/30 p-4">
-                  <div className="text-sm uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
-                    Seguimiento
+                <div className="mt-4 text-center">
+                  <div className="text-xs uppercase tracking-[0.25em] text-[color:var(--text-soft)]">
+                    Lic en Nutricion David Rios
                   </div>
-                  <div className="mt-2 text-xl font-semibold">
-                    Ajustes semanales y chat directo
+                  <div className="mt-1 text-sm font-medium text-white">
+                    Nutricion clinica y deportiva
                   </div>
                 </div>
               </div>
@@ -204,7 +176,7 @@ export default function Home() {
       </section>
 
       <section id="servicios" className="px-6 pb-16 md:px-12">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.8fr_1.2fr]">
+        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.9fr_1.1fr] md:items-start">
           <div className="space-y-4">
             <div className="text-sm uppercase tracking-[0.3em] text-[color:var(--text-soft)]">
               Servicios
@@ -226,71 +198,6 @@ export default function Home() {
                 </p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="metodo" className="px-6 pb-16 md:px-12">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[1fr_1fr]">
-          <div className="glass rounded-3xl p-8">
-            <div className="text-sm uppercase tracking-[0.3em] text-[color:var(--text-soft)]">
-              Metodo de trabajo
-            </div>
-            <h2 className="mt-4 font-[var(--font-display)] text-3xl">
-              De la ciencia al habito diario
-            </h2>
-            <p className="mt-4 text-[color:var(--text-soft)]">
-              Nutricion basada en evidencia, con herramientas practicas para que
-              el cambio se sienta posible y sostenible.
-            </p>
-          </div>
-          <div className="grid gap-6">
-            {steps.map((step, index) => (
-              <div
-                key={step.title}
-                className="glass flex items-start gap-4 rounded-2xl p-5"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-mist/40 text-sm">
-                  0{index + 1}
-                </div>
-                <div>
-                  <div className="text-lg font-semibold">{step.title}</div>
-                  <div className="text-sm text-[color:var(--text-soft)]">
-                    {step.detail}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="futuro" className="px-6 pb-16 md:px-12">
-        <div className="mx-auto max-w-6xl rounded-3xl border border-mist/30 bg-ink/60 p-8 md:p-12">
-          <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <div className="text-sm uppercase tracking-[0.3em] text-[color:var(--text-soft)]">
-                Plataforma a futuro
-              </div>
-              <h2 className="mt-4 font-[var(--font-display)] text-3xl">
-                Un espacio privado para tu progreso
-              </h2>
-              <p className="mt-4 text-[color:var(--text-soft)]">
-                Estamos preparando una plataforma para que cada paciente pueda
-                registrar sus datos, ver graficas y recibir ajustes en tiempo
-                real.
-              </p>
-            </div>
-            <div className="grid gap-3">
-              {expectations.map((item) => (
-                <div key={item} className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full bg-glow" />
-                  <span className="text-sm text-[color:var(--text-soft)]">
-                    {item}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
