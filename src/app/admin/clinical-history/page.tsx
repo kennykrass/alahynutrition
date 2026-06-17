@@ -23,6 +23,29 @@ type ClinicalHistoryPageProps = {
 const clinicalPageNumbers = [1, 2, 3, 4];
 const recallMeals = ["Desayuno", "Comida", "Cena"];
 const macroRows = ["Kcal", "HCO", "PT", "LP"];
+const circumferenceRows = [
+  ["Cintura", "100"],
+  ["Cadera", "105"],
+  ["Muneca", "17"],
+  ["Cabeza", ""],
+  ["Brazo relajado", "29"],
+  ["Brazo flexionado", "31"],
+  ["Pantorrilla", ""]
+];
+const skinfoldRows = ["Bicipital*", "Tricipital*", "Subescapular*", "Suprailiaco*", "Muslo", "Abdominal", "Pecho", "Axilar", "Pierna"];
+const diameterRows = ["Femur", "Humero", "Muneca"];
+const compositionRows = [
+  { label: "ICC", value: "0.95" },
+  { label: "Interpretacion riesgo", value: "Ginecoide / Muy bajo" },
+  { label: "% grasa c.", value: "Pendiente" },
+  { label: "Interpretacion", value: "Acrecentada" },
+  { label: "Masa muscular (kg)", value: "57.30" },
+  { label: "Densidad c.", value: "Pendiente" },
+  { label: "Masa grasa (kg)", value: "Pendiente" },
+  { label: "Masa magra (kg)", value: "75.50" },
+  { label: "Masa osea (kg)", value: "0.00" },
+  { label: "Masa residual (kg)", value: "18.20" }
+];
 
 function buildClinicalPageHref(patientId: string | undefined, page: number) {
   const params = new URLSearchParams();
@@ -215,7 +238,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
 
           <section className="bg-ink/55">
             <div className="bg-steel px-6 py-2 text-center text-lg font-bold uppercase text-white">
-              {selectedPage === 2 ? "Recordatorio 24 horas" : "Historia clinica"}
+              {selectedPage === 2 ? "Recordatorio 24 horas" : selectedPage === 3 ? "Antropometria" : "Historia clinica"}
             </div>
 
             {selectedPage === 2 ? (
@@ -316,6 +339,146 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           ))}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : selectedPage === 3 ? (
+              <div className="grid lg:grid-cols-[1fr_1.05fr]">
+                <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Antropometria
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="grid items-end gap-4 sm:grid-cols-[1fr_13rem]">
+                      <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                        Circunferencias (cm)
+                      </h2>
+                      <div className="rounded-t-xl border border-glow/20 bg-glow/10 px-3 py-2 text-center text-sm font-semibold text-glow">
+                        11/03/2022
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-[1fr_4rem_4rem_4rem] text-center text-xs uppercase tracking-wide text-[color:var(--text-soft)]">
+                      <span />
+                      <span>Antes</span>
+                      <span>Actual</span>
+                      <span>Dif.</span>
+                    </div>
+                    <div className="mt-1 overflow-hidden rounded-xl border border-mist/10">
+                      {circumferenceRows.map(([label, value], index) => (
+                        <div
+                          className={`grid grid-cols-[1fr_4rem_4rem_4rem] text-sm ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                          key={label}
+                        >
+                          <span className="px-3 py-2 font-medium">{label}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center text-[color:var(--text-soft)]" />
+                          <span className="border-l border-mist/10 px-2 py-2 text-center text-white">{value}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center text-[color:var(--text-soft)]" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                      Pliegues (mm)
+                    </h2>
+                    <div className="mt-4 overflow-hidden rounded-xl border border-mist/10">
+                      {skinfoldRows.map((row, index) => (
+                        <div
+                          className={`grid grid-cols-[1fr_13rem] text-sm ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                          key={row}
+                        >
+                          <span className="px-3 py-2 font-medium">{row}</span>
+                          <span className="border-l border-mist/10" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                      Diametros (cm)
+                    </h2>
+                    <div className="mt-4 overflow-hidden rounded-xl border border-mist/10">
+                      {diameterRows.map((row, index) => (
+                        <div
+                          className={`grid grid-cols-[1fr_13rem] text-sm ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                          key={row}
+                        >
+                          <span className="px-3 py-2 font-medium">{row}</span>
+                          <span className="border-l border-mist/10" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="px-6 py-6 lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Resultados de antropometria
+                  </div>
+
+                  <div className="mt-5">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                      Composicion corporal
+                    </h2>
+                    <div className="mt-6 grid gap-8 xl:grid-cols-[0.78fr_1fr]">
+                      <div className="flex min-h-[32rem] items-center justify-center rounded-3xl border border-mist/10 bg-white/5 p-6">
+                        <div className="relative h-[28rem] w-48 opacity-90">
+                          <div className="absolute left-1/2 top-0 h-16 w-14 -translate-x-1/2 rounded-full bg-glow/35" />
+                          <div className="absolute left-1/2 top-14 h-40 w-24 -translate-x-1/2 rounded-[45%] bg-glow/35" />
+                          <div className="absolute left-[1.15rem] top-16 h-40 w-10 rotate-[13deg] rounded-full bg-glow/30" />
+                          <div className="absolute right-[1.15rem] top-16 h-40 w-10 -rotate-[13deg] rounded-full bg-glow/30" />
+                          <div className="absolute left-[4.3rem] top-48 h-44 w-10 rounded-full bg-glow/35" />
+                          <div className="absolute right-[4.3rem] top-48 h-44 w-10 rounded-full bg-glow/35" />
+                          <div className="absolute left-[4.1rem] bottom-0 h-9 w-11 rounded-full bg-glow/30" />
+                          <div className="absolute right-[4.1rem] bottom-0 h-9 w-11 rounded-full bg-glow/30" />
+                          <div className="absolute left-1/2 top-[11.5rem] h-16 w-px -translate-x-1/2 bg-ink/30" />
+                          <div className="absolute left-[4.5rem] top-[18rem] h-8 w-px rotate-12 bg-ink/20" />
+                          <div className="absolute right-[4.5rem] top-[18rem] h-8 w-px -rotate-12 bg-ink/20" />
+                          <div className="absolute bottom-[-5.5rem] left-1/2 h-24 w-36 -translate-x-1/2 rounded-[50%] bg-glow/10 blur-sm" />
+                        </div>
+                      </div>
+
+                      <div className="grid content-start gap-4">
+                        <div className="grid gap-2">
+                          {compositionRows.map((row, index) => (
+                            <div className="grid grid-cols-[1fr_8.5rem] items-center gap-3 text-sm" key={`${row.label}-${index}`}>
+                              <span className="text-right font-semibold uppercase text-white">{row.label}</span>
+                              <span className="min-h-10 rounded-xl border border-mist/10 bg-white/5 px-3 py-2 text-center text-[color:var(--text-soft)]">
+                                {row.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-4 gap-3">
+                          {["ICC", "Grasa", "Musculo", "Residual"].map((label, index) => (
+                            <div
+                              className={`grid aspect-square place-items-center rounded-2xl border text-xs font-bold uppercase ${
+                                index === 0
+                                  ? "border-glow/60 bg-glow/10 text-glow"
+                                  : index === 1
+                                    ? "border-emerald-300/40 bg-emerald-300/10 text-emerald-100"
+                                    : index === 2
+                                      ? "border-sky-300/40 bg-sky-300/10 text-sky-100"
+                                      : "border-mist/20 bg-white/5 text-[color:var(--text-soft)]"
+                              }`}
+                              key={label}
+                            >
+                              {label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </section>
