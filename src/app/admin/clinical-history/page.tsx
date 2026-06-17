@@ -20,7 +20,7 @@ type ClinicalHistoryPageProps = {
   };
 };
 
-const clinicalPageNumbers = [1, 2, 3, 4, 5];
+const clinicalPageNumbers = [1, 2, 3, 4, 5, 6];
 const recallMeals = ["Desayuno", "Comida", "Cena"];
 const macroRows = ["Kcal", "HCO", "PT", "LP"];
 const circumferenceRows = [
@@ -76,6 +76,12 @@ const followUpHealthRows = [
   "Consumo de alcohol",
   "Consumo de tabaco"
 ];
+const progressDates = ["15/03/20", "11/03/20", "14/02/20"];
+const progressMetrics = [
+  { label: "Peso", values: ["73", "75", "75"], color: "stroke-glow", text: "text-glow", band: "bg-glow/10" },
+  { label: "Grasa", values: ["21", "23", "23"], color: "stroke-amber-300", text: "text-amber-200", band: "bg-amber-300/10" },
+  { label: "Musculo", values: ["21", "20", "20"], color: "stroke-rose-300", text: "text-rose-200", band: "bg-rose-300/10" }
+];
 
 function buildClinicalPageHref(patientId: string | undefined, page: number) {
   const params = new URLSearchParams();
@@ -106,6 +112,61 @@ function formatSex(value?: string | null) {
 
 function EmptyCell() {
   return <span className="block min-h-7 rounded-lg border border-mist/10 bg-white/5" />;
+}
+
+function ProgressChart({
+  metrics,
+  height = "h-40"
+}: {
+  metrics: typeof progressMetrics;
+  height?: string;
+}) {
+  return (
+    <div className={`relative ${height} rounded-2xl border border-mist/10 bg-white/5 p-4`}>
+      <div className="absolute inset-x-14 top-8 bottom-10 bg-[linear-gradient(0deg,rgba(255,255,255,0.10)_1px,transparent_1px)] bg-[length:100%_33.33%]" />
+      <div className="absolute left-4 top-7 bottom-10 flex flex-col justify-between text-[0.65rem] text-[color:var(--text-soft)]">
+        <span>105</span>
+        <span>55</span>
+        <span>5</span>
+      </div>
+      <svg className="absolute inset-x-12 top-7 bottom-10 h-[calc(100%-4.25rem)] w-[calc(100%-6rem)] overflow-visible" viewBox="0 0 300 120" preserveAspectRatio="none">
+        {metrics.map((metric) => (
+          <polyline
+            className={`${metric.color} fill-none`}
+            key={metric.label}
+            points={metric.label === "Peso" ? "0,42 90,38 150,30 205,112" : metric.label === "Grasa" ? "0,92 90,88 150,84 205,118" : "0,96 90,94 150,98 205,120"}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-x-12 top-3 grid grid-cols-3 text-center text-xs font-bold">
+        {metrics[0].values.map((value, index) => (
+          <span className={metrics[0].text} key={`${value}-${index}`}>{value}</span>
+        ))}
+      </div>
+      {metrics.length > 1 ? (
+        <div className="absolute inset-x-12 top-[42%] grid grid-cols-3 text-center text-xs font-bold">
+          {metrics[1].values.map((value, index) => (
+            <span className={metrics[1].text} key={`${value}-${index}`}>{value}</span>
+          ))}
+        </div>
+      ) : null}
+      {metrics.length > 2 ? (
+        <div className="absolute inset-x-12 top-[58%] grid grid-cols-3 text-center text-xs font-bold">
+          {metrics[2].values.map((value, index) => (
+            <span className={metrics[2].text} key={`${value}-${index}`}>{value}</span>
+          ))}
+        </div>
+      ) : null}
+      <div className="absolute inset-x-12 bottom-2 grid grid-cols-3 text-center text-[0.65rem] text-[color:var(--text-soft)]">
+        {progressDates.map((date) => (
+          <span className="-rotate-12" key={date}>{date}</span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default async function ClinicalHistoryPage({ searchParams }: ClinicalHistoryPageProps) {
@@ -287,6 +348,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                     ? "Formulas"
                     : selectedPage === 5
                       ? "Consulta de seguimiento"
+                      : selectedPage === 6
+                        ? "Resumen de progreso"
                     : "Historia clinica"}
             </div>
 
@@ -743,6 +806,89 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                         </div>
                       </section>
                     </div>
+                  </div>
+                </section>
+              </div>
+            ) : selectedPage === 6 ? (
+              <div className="grid min-h-[42rem] lg:grid-cols-[1.08fr_1fr]">
+                <section className="border-b border-mist/15 lg:border-b-0 lg:border-r">
+                  <div className="grid grid-cols-[3rem_1fr] border-b border-mist/15">
+                    <div className="grid place-items-center border-r border-mist/10 bg-glow/10 px-2 py-6">
+                      <span className="-rotate-90 text-sm font-bold uppercase tracking-wide text-glow">Peso</span>
+                    </div>
+                    <div className="px-6 py-5">
+                      <ProgressChart metrics={[progressMetrics[0]]} height="h-44" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[3rem_1fr] border-b border-mist/15">
+                    <div className="grid place-items-center border-r border-mist/10 bg-amber-300/10 px-2 py-6">
+                      <span className="-rotate-90 text-sm font-bold uppercase tracking-wide text-amber-200">Grasa</span>
+                    </div>
+                    <div className="px-6 py-5">
+                      <ProgressChart metrics={[progressMetrics[1]]} height="h-44" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[3rem_1fr]">
+                    <div className="grid place-items-center border-r border-mist/10 bg-emerald-300/10 px-2 py-8">
+                      <span className="-rotate-90 whitespace-nowrap text-sm font-bold uppercase tracking-wide text-emerald-200">
+                        Resumen general
+                      </span>
+                    </div>
+                    <div className="px-6 py-8">
+                      <ProgressChart metrics={progressMetrics} height="h-64" />
+                      <div className="mt-5 flex flex-wrap justify-center gap-3 text-xs uppercase text-[color:var(--text-soft)]">
+                        {progressMetrics.map((metric) => (
+                          <span className="flex items-center gap-2" key={metric.label}>
+                            <i className={`h-2.5 w-2.5 rounded-full ${metric.band}`} />
+                            {metric.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="px-6 py-7 lg:px-12">
+                  <div className="grid max-w-sm gap-3">
+                    <span className="w-fit rounded-lg border border-mist/25 bg-white/5 px-3 py-2 text-xs text-[color:var(--text-soft)]">
+                      21 % Musculo
+                    </span>
+                    <span className="w-fit rounded-lg border border-amber-300/50 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
+                      21 % Grasa
+                    </span>
+                  </div>
+
+                  <div className="mt-5 flex min-h-[34rem] items-center justify-center rounded-3xl border border-mist/10 bg-white/5 p-6">
+                    <div className="relative h-[30rem] w-56">
+                      <div className="absolute left-1/2 top-0 h-16 w-14 -translate-x-1/2 rounded-full bg-rose-200/85" />
+                      <div className="absolute left-1/2 top-14 h-40 w-24 -translate-x-1/2 rounded-[45%] bg-rose-200/85" />
+                      <div className="absolute left-[1.45rem] top-16 h-40 w-10 rotate-[13deg] rounded-full bg-rose-200/85" />
+                      <div className="absolute right-[1.45rem] top-16 h-40 w-10 -rotate-[13deg] rounded-full bg-rose-200/85" />
+                      <div className="absolute left-[4.8rem] top-48 h-44 w-10 rounded-full bg-amber-200/90" />
+                      <div className="absolute right-[4.8rem] top-48 h-44 w-10 rounded-full bg-amber-200/90" />
+                      <div className="absolute left-[4.6rem] bottom-0 h-9 w-11 rounded-full bg-amber-200/90" />
+                      <div className="absolute right-[4.6rem] bottom-0 h-9 w-11 rounded-full bg-amber-200/90" />
+                      <div className="absolute left-[1.35rem] top-[12.7rem] h-8 w-10 rounded-full bg-amber-200/90" />
+                      <div className="absolute right-[1.35rem] top-[12.7rem] h-8 w-10 rounded-full bg-amber-200/90" />
+                      <div className="absolute left-1/2 top-[11.5rem] h-16 w-px -translate-x-1/2 bg-ink/30" />
+                      <div className="absolute bottom-[-4.5rem] left-1/2 h-20 w-40 -translate-x-1/2 rounded-[50%] bg-glow/10 blur-md" />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    {[
+                      ["Ultima cita", "15/03/2022"],
+                      ["Peso", `${lastEntry?.weightKg ?? profile?.currentWeightKg ?? 73} kg`],
+                      ["Grasa", "21%"],
+                      ["Musculo", "21%"]
+                    ].map(([label, value]) => (
+                      <div className="rounded-2xl border border-mist/10 bg-white/5 p-4 text-center" key={label}>
+                        <div className="text-xs font-bold uppercase text-glow">{label}</div>
+                        <div className="mt-1 text-sm text-white">{value}</div>
+                      </div>
+                    ))}
                   </div>
                 </section>
               </div>
