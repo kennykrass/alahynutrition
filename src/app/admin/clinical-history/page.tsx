@@ -46,6 +46,28 @@ const compositionRows = [
   { label: "Masa osea (kg)", value: "0.00" },
   { label: "Masa residual (kg)", value: "18.20" }
 ];
+const energyFormulaRows = [
+  { label: "Harris Benedict", tmb: "1710", af: "2352", eta: "2523" },
+  { label: "Mifflin St.", tmb: "1625", af: "2235", eta: "2398" },
+  { label: "Valencia", tmb: "1756", af: "2415", eta: "2591" },
+  { label: "FAO/WHO/ONU", tmb: "1829", af: "2515", eta: "2698" }
+];
+const idealWeightRows = [
+  { label: "Lorentz", value: "60 kg", difference: "16 kg" },
+  { label: "Broca", value: "63 kg", difference: "13 kg" },
+  { label: "Metropolitan Life Insurance Company", value: "60 kg", difference: "16 kg" }
+];
+const bodyComplexionRows = [
+  { label: "Resultado", value: "17" },
+  { label: "Interpretacion", value: "Pequena" },
+  { label: "IMC", value: "28.4" },
+  { label: "Interpretacion", value: "Sobre peso" }
+];
+const somatotypeRows = [
+  { label: "Endomorfismo", value: "-0.7" },
+  { label: "Mesomorfismo", value: "-11.4" },
+  { label: "Ectomorfismo", value: "0.2" }
+];
 
 function buildClinicalPageHref(patientId: string | undefined, page: number) {
   const params = new URLSearchParams();
@@ -238,7 +260,13 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
 
           <section className="bg-ink/55">
             <div className="bg-steel px-6 py-2 text-center text-lg font-bold uppercase text-white">
-              {selectedPage === 2 ? "Recordatorio 24 horas" : selectedPage === 3 ? "Antropometria" : "Historia clinica"}
+              {selectedPage === 2
+                ? "Recordatorio 24 horas"
+                : selectedPage === 3
+                  ? "Antropometria"
+                  : selectedPage === 4
+                    ? "Formulas"
+                    : "Historia clinica"}
             </div>
 
             {selectedPage === 2 ? (
@@ -477,6 +505,146 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                               {label}
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : selectedPage === 4 ? (
+              <div className="grid lg:grid-cols-[1fr_1.22fr]">
+                <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Formulas
+                  </div>
+
+                  <div className="mt-5">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">Gasto energetico</h2>
+                    <div className="mt-3 grid grid-cols-[1fr_4rem_4rem_4rem] text-center text-xs uppercase text-[color:var(--text-soft)]">
+                      <span />
+                      <span>TMB</span>
+                      <span>+AF</span>
+                      <span>+ETA</span>
+                    </div>
+                    <div className="overflow-hidden rounded-xl border border-mist/10">
+                      {energyFormulaRows.map((row, index) => (
+                        <div
+                          className={`grid grid-cols-[1fr_4rem_4rem_4rem] text-sm ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                          key={row.label}
+                        >
+                          <span className="px-3 py-2 font-medium">{row.label}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.tmb}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.af}</span>
+                          <span className="border-l border-mist/10 bg-glow/10 px-2 py-2 text-center font-bold text-glow">{row.eta}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-14">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">Peso ideal</h2>
+                    <div className="mt-3 overflow-hidden rounded-xl border border-mist/10">
+                      <div className="grid grid-cols-[1fr_6rem_6rem] bg-white/10 text-center text-xs uppercase text-[color:var(--text-soft)]">
+                        <span />
+                        <span className="py-2">Peso</span>
+                        <span className="py-2">Diferencia</span>
+                      </div>
+                      {idealWeightRows.map((row, index) => (
+                        <div
+                          className={`grid grid-cols-[1fr_6rem_6rem] text-sm ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                          key={row.label}
+                        >
+                          <span className="px-3 py-2 font-medium">{row.label}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.value}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center font-semibold text-rose-200">↑ {row.difference}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-10">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">Complexion corporal</h2>
+                    <div className="mt-3 overflow-hidden rounded-xl border border-mist/10">
+                      {bodyComplexionRows.map((row, index) => (
+                        <div
+                          className={`grid grid-cols-[1fr_10rem] text-sm ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                          key={`${row.label}-${index}`}
+                        >
+                          <span className="px-3 py-2 font-medium">{row.label}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="px-6 py-6 lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Resultados de antropometria
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="grid items-end gap-4 sm:grid-cols-[1fr_11rem]">
+                      <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">Somatocarta</h2>
+                      <div className="rounded-t-xl border border-glow/20 bg-glow/10 px-3 py-2 text-center text-sm font-semibold text-glow">
+                        11/03/2022
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 overflow-hidden rounded-xl border border-mist/10 text-center">
+                      {somatotypeRows.map((row) => (
+                        <div className="border-r border-mist/10 last:border-r-0" key={row.label}>
+                          <div className="bg-white/10 px-2 py-2 text-xs uppercase tracking-wide text-[color:var(--text-soft)]">{row.label}</div>
+                          <div className="bg-white/5 px-2 py-2 text-sm font-semibold text-white">{row.value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-8 rounded-3xl border border-mist/10 bg-white/5 p-4 sm:p-8">
+                      <div className="relative mx-auto aspect-square max-w-[31rem] overflow-hidden rounded-2xl border border-mist/10 bg-ink/50">
+                        <div className="absolute inset-8 bg-[linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.10)_1px,transparent_1px)] bg-[length:7.14%_7.14%]" />
+                        <div className="absolute left-1/2 top-8 bottom-8 w-px -translate-x-1/2 bg-mist/40" />
+                        <div className="absolute left-8 right-8 top-1/2 h-px -translate-y-1/2 bg-mist/40" />
+                        <div className="absolute left-[18%] right-[18%] top-[14%] h-[72%] rounded-[50%] border border-glow/35" />
+                        <div className="absolute left-[16%] right-[16%] top-[16%] h-px origin-left rotate-[31deg] bg-mist/50" />
+                        <div className="absolute left-[16%] right-[16%] bottom-[18%] h-px origin-left -rotate-[31deg] bg-mist/50" />
+                        <div className="absolute left-[16%] right-[16%] top-[50%] h-px origin-left rotate-[-31deg] bg-mist/50" />
+                        <div className="absolute left-[16%] right-[16%] top-[50%] h-px origin-right rotate-[31deg] bg-mist/50" />
+                        <div className="absolute left-1/2 top-1/2 grid h-5 w-5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border border-glow bg-glow text-ink shadow-glow">
+                          <span className="h-2 w-2 rounded-full bg-ink" />
+                        </div>
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-bold uppercase text-[color:var(--text-soft)]">X</div>
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold uppercase text-[color:var(--text-soft)]">Y</div>
+                        <div className="absolute inset-y-8 left-1 grid grid-rows-[repeat(15,minmax(0,1fr))] text-right text-[0.62rem] text-[color:var(--text-soft)]">
+                          {Array.from({ length: 15 }).map((_, index) => (
+                            <span key={index}>{14 - index * 2}</span>
+                          ))}
+                        </div>
+                        <div className="absolute inset-x-8 bottom-5 grid grid-cols-[repeat(15,minmax(0,1fr))] text-center text-[0.62rem] text-[color:var(--text-soft)]">
+                          {Array.from({ length: 15 }).map((_, index) => (
+                            <span key={index}>{-14 + index * 2}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mx-auto mt-6 max-w-xl overflow-hidden rounded-xl border border-mist/10 text-sm">
+                        <div className="grid grid-cols-[6rem_1fr_1fr_2rem] bg-steel text-center font-bold uppercase text-white">
+                          <span className="py-2">Actual</span>
+                          <span className="py-2 text-glow">Eje X</span>
+                          <span className="py-2 text-glow">Eje Y</span>
+                          <span className="py-2" />
+                        </div>
+                        <div className="grid grid-cols-[6rem_1fr_1fr_2rem] bg-white/5 text-center">
+                          <span className="py-2 font-semibold">Anterior</span>
+                          <span className="border-l border-mist/10 py-2">0.97618</span>
+                          <span className="border-l border-mist/10 py-2">-22.279</span>
+                          <span className="grid place-items-center border-l border-mist/10"><i className="h-3 w-3 rounded-full bg-glow" /></span>
                         </div>
                       </div>
                     </div>
