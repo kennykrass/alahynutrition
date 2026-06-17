@@ -16,8 +16,28 @@ import { requireRole } from "@/lib/session";
 type ClinicalHistoryPageProps = {
   searchParams?: {
     patientId?: string;
+    page?: string;
   };
 };
+
+const clinicalPageNumbers = [1, 2, 3, 4];
+const recallMeals = ["Desayuno", "Comida", "Cena"];
+const macroRows = ["Kcal", "HCO", "PT", "LP"];
+
+function buildClinicalPageHref(patientId: string | undefined, page: number) {
+  const params = new URLSearchParams();
+
+  if (patientId) {
+    params.set("patientId", patientId);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const query = params.toString();
+  return `/admin/clinical-history${query ? `?${query}` : ""}`;
+}
 
 function formatSex(value?: string | null) {
   if (value === "MALE") {
@@ -62,6 +82,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
   const profile = selectedPatient?.profile;
   const lastEntry = selectedPatient?.entries[0];
   const age = calculateAge(profile?.birthDate);
+  const requestedPage = Number(searchParams?.page ?? 1);
+  const selectedPage = clinicalPageNumbers.includes(requestedPage) ? requestedPage : 1;
 
   return (
     <main className="px-4 py-6 text-white md:px-8">
@@ -73,24 +95,48 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
               <div className="text-sm uppercase tracking-[0.22em] text-[color:var(--text-soft)]">Nutrition</div>
             </Link>
           </div>
-          <div className="flex items-center justify-center gap-6 px-6 py-5">
+          <div className="flex flex-wrap items-center justify-center gap-6 px-6 py-5">
             {clinicalSections.map((section, index) => (
-              <div
+              <Link
                 className={`grid h-16 w-16 place-items-center rounded-full border border-mist/20 bg-ink/80 text-lg font-bold text-glow shadow-glow ${
-                  index === 0 ? "ring-4 ring-glow/40" : ""
+                  selectedPage === index + 1 ? "ring-4 ring-glow/40" : ""
                 }`}
+                href={buildClinicalPageHref(selectedPatient?.id, index + 1)}
                 key={section.value}
                 title={section.label}
               >
                 {index + 1}
-              </div>
+              </Link>
             ))}
+            <div className="ml-0 flex items-center gap-2 rounded-full border border-mist/15 bg-ink/70 px-4 py-2 text-sm text-[color:var(--text-soft)] lg:ml-4">
+              <span>Pagina</span>
+              {clinicalPageNumbers.map((page) => (
+                <Link
+                  className={`grid h-8 w-8 place-items-center rounded-lg border text-sm font-bold transition ${
+                    selectedPage === page
+                      ? "border-glow bg-glow text-ink shadow-glow"
+                      : "border-mist/15 bg-white/5 text-glow hover:border-glow/60"
+                  }`}
+                  href={buildClinicalPageHref(selectedPatient?.id, page)}
+                  key={page}
+                >
+                  {page}
+                </Link>
+              ))}
+              <span className="ml-3 rounded-lg border border-glow/30 bg-white/5 px-5 py-2 text-xs font-bold uppercase text-white">
+                Registrar
+              </span>
+              <span className="grid h-9 w-9 place-items-center rounded-full border border-glow/40 bg-steel text-lg font-bold text-glow">
+                ?
+              </span>
+            </div>
           </div>
         </header>
 
         <div className="grid md:grid-cols-[21rem_1fr]">
           <aside className="border-r border-mist/15 bg-ink/80">
             <form className="border-b border-mist/15 p-6">
+              <input name="page" type="hidden" value={selectedPage} />
               <label className="text-xs font-bold uppercase tracking-[0.22em] text-[color:var(--text-soft)]" htmlFor="patientId">
                 Paciente
               </label>
@@ -169,9 +215,112 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
 
           <section className="bg-ink/55">
             <div className="bg-steel px-6 py-2 text-center text-lg font-bold uppercase text-white">
-              Historia clinica
+              {selectedPage === 2 ? "Recordatorio 24 horas" : "Historia clinica"}
             </div>
 
+            {selectedPage === 2 ? (
+              <div className="grid lg:grid-cols-[1fr_1.06fr]">
+                <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Recordatorio 24 horas
+                  </div>
+
+                  <div className="mt-5">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                      Alimentos consumidos
+                    </h2>
+                    {recallMeals.map((meal) => (
+                      <div className="mt-5" key={meal}>
+                        <div className="text-right text-sm font-semibold text-[color:var(--text-soft)]">{meal}</div>
+                        <div className="grid grid-cols-[1.25fr_0.7fr_0.85fr] border-b border-glow/60 pb-1 text-center text-xs uppercase tracking-wide text-[color:var(--text-soft)]">
+                          <span>Nombre</span>
+                          <span>Cantidad</span>
+                          <span>U. medida</span>
+                        </div>
+                        <div className="mt-1 grid gap-1">
+                          {Array.from({ length: 6 }).map((_, rowIndex) => (
+                            <div
+                              className={`grid min-h-7 grid-cols-[1.25fr_0.7fr_0.85fr] rounded-lg border border-mist/10 ${
+                                rowIndex % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                              }`}
+                              key={rowIndex}
+                            >
+                              <span />
+                              <span className="border-l border-mist/10" />
+                              <span className="border-l border-mist/10" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="px-6 py-6 lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Resultados
+                  </div>
+
+                  <div className="mt-5">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">Total dia</h2>
+                    <div className="grid grid-cols-8 rounded-b-xl border border-t-0 border-mist/10 bg-white/5 py-2 text-center text-xs uppercase">
+                      <span className="font-bold">Kcal</span>
+                      <span>0</span>
+                      <span className="font-bold">HCO</span>
+                      <span>0</span>
+                      <span className="font-bold">PT</span>
+                      <span>0</span>
+                      <span className="font-bold">LP</span>
+                      <span>0</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 rounded-2xl border border-mist/10 bg-white/5 p-5">
+                    <div className="grid min-h-72 grid-cols-[3rem_1fr] gap-3">
+                      <div className="flex items-center justify-center text-xs font-semibold uppercase text-[color:var(--text-soft)]">
+                        Kcal
+                      </div>
+                      <div className="relative border-l border-b border-mist/30 bg-[linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[length:10%_100%]">
+                        <div className="absolute inset-x-0 bottom-[-1.75rem] grid grid-cols-11 text-center text-xs text-[color:var(--text-soft)]">
+                          {Array.from({ length: 11 }).map((_, index) => (
+                            <span key={index}>{index / 10}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-10 flex justify-center gap-4 text-xs text-[color:var(--text-soft)]">
+                      <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-glow" />HCO</span>
+                      <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-sky-200" />PT</span>
+                      <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-emerald-300" />Lipidos</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-10">
+                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                      Total por tiempo de comida
+                    </h2>
+                    <div className="grid grid-cols-3 text-sm text-[color:var(--text-soft)]">
+                      {recallMeals.map((meal) => (
+                        <div className="border-r border-mist/10 last:border-r-0" key={meal}>
+                          <div className="bg-white/10 px-2 py-1 font-semibold text-glow">{meal}</div>
+                          {macroRows.map((row, index) => (
+                            <div
+                              className={`grid grid-cols-2 px-2 py-1 ${
+                                index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                              }`}
+                              key={row}
+                            >
+                              <span>{row}</span>
+                              <span className="text-center">0</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : (
             <div className="px-6 py-6 lg:px-16">
               <section>
                 <h2 className="border-b-2 border-glow/60 pb-1 text-2xl uppercase text-glow">
@@ -296,6 +445,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 </div>
               </section>
             </div>
+            )}
           </section>
         </div>
       </div>
