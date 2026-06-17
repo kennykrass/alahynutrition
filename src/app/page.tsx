@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import { getPostLoginPath, getSession } from "@/lib/session";
+
 const stats = [
   { label: "Planes personalizados", value: "+120" },
   { label: "Pacientes en seguimiento", value: "36" },
@@ -28,7 +30,10 @@ const services = [
 const whatsappHref =
   "https://wa.me/528113282818?text=Hola%2C%20quiero%20informacion%20sobre%20una%20consulta%20en%20Alahy%20Nutrition";
 
-export default function Home() {
+export default async function Home() {
+  const session = await getSession();
+  const dashboardPath = session ? getPostLoginPath(session) : null;
+
   return (
     <main>
       <div className="absolute inset-0 -z-10">
@@ -55,18 +60,29 @@ export default function Home() {
           </Link>
           <div className="hidden justify-center pt-10 md:flex">
             <div className="glass flex items-center gap-3 rounded-full border border-mist/20 bg-ink/55 p-2">
-              <Link
-                className="rounded-full border border-mist/30 px-5 py-2 text-sm font-semibold text-white transition hover:border-white hover:bg-white/5"
-                href="/login"
-              >
-                Ingresar
-              </Link>
-              <Link
-                className="rounded-full bg-glow px-5 py-2 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
-                href="/register"
-              >
-                Registrarse
-              </Link>
+              {dashboardPath ? (
+                <Link
+                  className="rounded-full bg-glow px-6 py-2 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                  href={dashboardPath}
+                >
+                  {session?.role === "ADMIN" ? "Panel Admin" : "Mi panel"}
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    className="rounded-full border border-mist/30 px-5 py-2 text-sm font-semibold text-white transition hover:border-white hover:bg-white/5"
+                    href="/login"
+                  >
+                    Ingresar
+                  </Link>
+                  <Link
+                    className="rounded-full bg-glow px-5 py-2 text-sm font-semibold text-ink shadow-glow transition hover:translate-y-[-1px]"
+                    href="/register"
+                  >
+                    Registrarse
+                  </Link>
+                </>
+              )}
             </div>
           </div>
           <nav className="hidden gap-6 pt-0 text-sm text-[color:var(--text-soft)] md:flex">
