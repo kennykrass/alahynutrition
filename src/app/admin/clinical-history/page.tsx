@@ -20,7 +20,7 @@ type ClinicalHistoryPageProps = {
   };
 };
 
-const clinicalPageNumbers = [1, 2, 3, 4];
+const clinicalPageNumbers = [1, 2, 3, 4, 5];
 const recallMeals = ["Desayuno", "Comida", "Cena"];
 const macroRows = ["Kcal", "HCO", "PT", "LP"];
 const circumferenceRows = [
@@ -67,6 +67,14 @@ const somatotypeRows = [
   { label: "Endomorfismo", value: "-0.7" },
   { label: "Mesomorfismo", value: "-11.4" },
   { label: "Ectomorfismo", value: "0.2" }
+];
+const followUpHealthRows = [
+  "Motivo de consulta:",
+  "Padece alguna enfermedad?",
+  "Toma medicamentos?",
+  "Nombre / Dosis",
+  "Consumo de alcohol",
+  "Consumo de tabaco"
 ];
 
 function buildClinicalPageHref(patientId: string | undefined, page: number) {
@@ -168,9 +176,20 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                   {page}
                 </Link>
               ))}
-              <span className="ml-3 rounded-lg border border-glow/30 bg-white/5 px-5 py-2 text-xs font-bold uppercase text-white">
-                Registrar
-              </span>
+              {selectedPage === 5 ? (
+                <>
+                  <span className="ml-3 rounded-lg border border-rose-300/40 bg-rose-500/90 px-5 py-2 text-xs font-bold uppercase text-white shadow-lg shadow-rose-950/30">
+                    Eliminar registro
+                  </span>
+                  <span className="rounded-lg border border-glow/30 bg-white px-5 py-2 text-xs font-bold uppercase text-ink shadow-glow">
+                    Iniciar
+                  </span>
+                </>
+              ) : (
+                <span className="ml-3 rounded-lg border border-glow/30 bg-white/5 px-5 py-2 text-xs font-bold uppercase text-white">
+                  Registrar
+                </span>
+              )}
               <span className="grid h-9 w-9 place-items-center rounded-full border border-glow/40 bg-steel text-lg font-bold text-glow">
                 ?
               </span>
@@ -266,6 +285,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                   ? "Antropometria"
                   : selectedPage === 4
                     ? "Formulas"
+                    : selectedPage === 5
+                      ? "Consulta de seguimiento"
                     : "Historia clinica"}
             </div>
 
@@ -560,7 +581,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                         >
                           <span className="px-3 py-2 font-medium">{row.label}</span>
                           <span className="border-l border-mist/10 px-2 py-2 text-center">{row.value}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center font-semibold text-rose-200">↑ {row.difference}</span>
+                          <span className="border-l border-mist/10 px-2 py-2 text-center font-semibold text-rose-200">+ {row.difference}</span>
                         </div>
                       ))}
                     </div>
@@ -647,6 +668,80 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           <span className="grid place-items-center border-l border-mist/10"><i className="h-3 w-3 rounded-full bg-glow" /></span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : selectedPage === 5 ? (
+              <div className="px-6 py-7 lg:px-14">
+                <section>
+                  <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                    Consulta de seguimiento
+                  </h2>
+                  <div className="mx-auto mt-8 h-12 max-w-3xl rounded-xl border border-glow/20 bg-glow/10" />
+                </section>
+
+                <section className="mt-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                    Informacion obtenida en ultima consulta
+                  </div>
+
+                  <div className="mt-8 grid gap-10 xl:grid-cols-[1fr_1fr]">
+                    <div>
+                      <h3 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
+                        Antecedentes de salud
+                      </h3>
+                      <div className="mt-5 grid gap-2">
+                        {followUpHealthRows.map((row) => (
+                          <div className="grid grid-cols-[1fr_13rem] gap-4 text-sm" key={row}>
+                            <span>{row}</span>
+                            <span className="min-h-7 rounded-lg border border-mist/10 bg-white/5" />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-8 overflow-hidden rounded-xl border border-mist/10">
+                        <div className="grid grid-cols-[1.5fr_repeat(3,0.42fr)] bg-white/10 text-center text-sm uppercase text-glow">
+                          <span className="py-2">Padecimientos</span>
+                          <span className="py-2">Madre</span>
+                          <span className="py-2">Padre</span>
+                          <span className="py-2">Paciente</span>
+                        </div>
+                        {familyHistoryRows.map((row, index) => (
+                          <div
+                            className={`grid grid-cols-[1.5fr_repeat(3,0.42fr)] text-sm ${
+                              index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                            }`}
+                            key={row}
+                          >
+                            <span className="px-2 py-2 font-medium">{row}</span>
+                            <span className="border-l border-mist/10" />
+                            <span className="border-l border-mist/10" />
+                            <span className="border-l border-mist/10" />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-right text-xs font-semibold italic text-[color:var(--text-soft)]">
+                        Marcar (+) si lo padece.
+                      </p>
+                    </div>
+
+                    <div className="grid content-start gap-9">
+                      <section>
+                        <div className="text-center text-sm font-semibold">
+                          Aspecto general (cabello, ojos, piel, unas, labios, encias, etc.).
+                        </div>
+                        <div className="mt-2 min-h-32 rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-[color:var(--text-soft)]">
+                          Aspecto general normal
+                        </div>
+                      </section>
+
+                      <section>
+                        <div className="text-center text-sm font-semibold">Comentarios generales</div>
+                        <div className="mt-2 min-h-36 rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-[color:var(--text-soft)]">
+                          {profile?.notes || "Sin comentarios registrados en la ultima consulta."}
+                        </div>
+                      </section>
                     </div>
                   </div>
                 </section>
