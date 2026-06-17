@@ -3,9 +3,11 @@
 import {
   AppointmentStatus,
   AppointmentType,
+  BiologicalSex,
   CareType,
   PatientDocumentCategory,
   PatientStatus,
+  PhysicalActivityLevel,
   PlanDuration,
   Prisma,
   UserRole,
@@ -287,6 +289,144 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   clearSession();
   redirect("/login");
+}
+
+export async function createClinicalDemoPatientAction() {
+  await requireRole(UserRole.ADMIN);
+
+  const email = "demo.clinico@alahynutrition.com";
+
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {},
+    create: {
+      fullName: "Erick Leija Arriaga",
+      email,
+      passwordHash: await bcrypt.hash("AlahyDemo123", 12),
+      mustChangePassword: true,
+      role: UserRole.PATIENT,
+      profile: {
+        create: {
+          patientCode: "DEMO-CLINICO",
+          phone: "81 0000 0000",
+          birthDate: new Date("1995-06-17T00:00:00"),
+          biologicalSex: BiologicalSex.MALE,
+          heightCm: 163,
+          initialWeightKg: 76,
+          currentWeightKg: 76,
+          previousDietExperience: true,
+          previousDietDuration: "3 meses con plan general.",
+          physicalActivityLevel: PhysicalActivityLevel.LIGHT,
+          status: PatientStatus.ACTIVE,
+          careType: CareType.INITIAL,
+          planDuration: PlanDuration.THREE_MONTHS,
+          medications: "Multivitaminico ocasional",
+          foodAllergies: "Sin alergias reportadas",
+          goal: "Disminuir peso",
+          notes: JSON.stringify({
+            disease: "Sin diagnostico cronico reportado",
+            medicationNameDose: "Multivitaminico ocasional",
+            alcohol: "Social, 1 vez por semana",
+            tobacco: "No",
+            generalCondition: "Aspecto general normal",
+            comments: "Paciente demo para visualizar y editar historia clinica."
+          })
+        }
+      },
+      entries: {
+        create: {
+          loggedAt: new Date("2026-06-17T12:00:00"),
+          weightKg: 76,
+          waistCm: 100,
+          bodyFatPct: 21,
+          notes: "Registro inicial demo"
+        }
+      }
+    },
+    include: {
+      profile: true
+    }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/clinical-history");
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(user.id)}&success=Paciente%20demo%20listo%20para%20editar.`);
+}
+
+export async function saveClinicalHistoryAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+  const page = getField(formData, "page") || "1";
+
+  if (!userId) {
+    redirect("/admin/clinical-history?error=Selecciona%20un%20paciente%20antes%20de%20guardar.");
+  }
+
+  const weightKg = parseOptionalFloat(getField(formData, "weightKg"));
+
+  if (Number.isNaN(weightKg)) {
+    redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=${encodeURIComponent(page)}&error=El%20peso%20debe%20ser%20un%20numero%20valido.`);
+  }
+
+  const notesPayload = {
+    disease: getField(formData, "disease").trim(),
+    medicationNameDose: getField(formData, "medicationNameDose").trim(),
+    alcohol: getField(formData, "alcohol").trim(),
+    tobacco: getField(formData, "tobacco").trim(),
+    generalCondition: getField(formData, "generalCondition").trim(),
+    comments: getField(formData, "comments").trim()
+  };
+
+  const existingEntry = await prisma.progressEntry.findFirst({
+    where: { userId },
+    orderBy: { loggedAt: "desc" },
+    select: { id: true }
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: {
+        goal: getField(formData, "goal").trim() || null,
+        medications: getField(formData, "medications").trim() || null,
+        foodAllergies: getField(formData, "foodAllergies").trim() || null,
+        currentWeightKg: weightKg,
+        notes: JSON.stringify(notesPayload)
+      },
+      create: {
+        userId,
+        patientCode: await generatePatientCode(tx),
+        goal: getField(formData, "goal").trim() || null,
+        medications: getField(formData, "medications").trim() || null,
+        foodAllergies: getField(formData, "foodAllergies").trim() || null,
+        currentWeightKg: weightKg,
+        notes: JSON.stringify(notesPayload)
+      }
+    });
+
+    if (existingEntry) {
+      await tx.progressEntry.update({
+        where: { id: existingEntry.id },
+        data: {
+          weightKg,
+          notes: notesPayload.comments || "Historia clinica actualizada"
+        }
+      });
+    } else if (weightKg !== undefined) {
+      await tx.progressEntry.create({
+        data: {
+          userId,
+          weightKg,
+          notes: notesPayload.comments || "Historia clinica actualizada"
+        }
+      });
+    }
+  });
+
+  revalidatePath("/admin/clinical-history");
+  revalidatePath(`/admin/patients/${userId}`);
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=${encodeURIComponent(page)}&success=Historia%20clinica%20guardada.`);
 }
 
 export async function createPatientByAdminAction(formData: FormData) {

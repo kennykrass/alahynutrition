@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
+import { createClinicalDemoPatientAction, saveClinicalHistoryAction } from "@/app/auth-actions";
 import {
   biochemicalIndicators,
   calculateAge,
@@ -17,7 +18,18 @@ type ClinicalHistoryPageProps = {
   searchParams?: {
     patientId?: string;
     page?: string;
+    success?: string;
+    error?: string;
   };
+};
+
+type ClinicalNotes = {
+  disease: string;
+  medicationNameDose: string;
+  alcohol: string;
+  tobacco: string;
+  generalCondition: string;
+  comments: string;
 };
 
 const clinicalPageNumbers = [1, 2, 3, 4, 5, 6];
@@ -114,6 +126,55 @@ function EmptyCell() {
   return <span className="block min-h-7 rounded-lg border border-mist/10 bg-white/5" />;
 }
 
+function EditableCell({
+  name,
+  defaultValue,
+  placeholder
+}: {
+  name: string;
+  defaultValue?: string | null;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      className="min-h-7 w-full rounded-lg border border-mist/10 bg-white/5 px-3 py-1 text-center text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+      defaultValue={defaultValue ?? ""}
+      name={name}
+      placeholder={placeholder}
+    />
+  );
+}
+
+function parseClinicalNotes(notes?: string | null): ClinicalNotes {
+  const fallback = {
+    disease: "",
+    medicationNameDose: "",
+    alcohol: "",
+    tobacco: "",
+    generalCondition: "Aspecto general normal",
+    comments: notes ?? ""
+  };
+
+  if (!notes) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(notes) as Partial<ClinicalNotes>;
+
+    return {
+      disease: parsed.disease ?? "",
+      medicationNameDose: parsed.medicationNameDose ?? "",
+      alcohol: parsed.alcohol ?? "",
+      tobacco: parsed.tobacco ?? "",
+      generalCondition: parsed.generalCondition ?? "Aspecto general normal",
+      comments: parsed.comments ?? ""
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 function ProgressChart({
   metrics,
   height = "h-40"
@@ -196,6 +257,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
   const profile = selectedPatient?.profile;
   const lastEntry = selectedPatient?.entries[0];
   const age = calculateAge(profile?.birthDate);
+  const clinicalNotes = parseClinicalNotes(profile?.notes);
   const requestedPage = Number(searchParams?.page ?? 1);
   const selectedPage = clinicalPageNumbers.includes(requestedPage) ? requestedPage : 1;
 
@@ -285,6 +347,18 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
               </button>
             </form>
 
+            <form action={createClinicalDemoPatientAction} className="border-b border-mist/15 px-6 py-4">
+              <button
+                className="w-full rounded-xl border border-glow/30 bg-white/5 px-4 py-3 text-sm font-bold text-glow transition hover:border-glow hover:bg-glow/10"
+                type="submit"
+              >
+                Crear paciente demo
+              </button>
+              <p className="mt-2 text-xs text-[color:var(--text-soft)]">
+                Usa datos mock para probar la historia clinica.
+              </p>
+            </form>
+
             <section className="p-6 text-center">
               <div className="mx-auto grid h-28 w-28 place-items-center rounded-full border-4 border-glow/50 bg-steel text-5xl text-white shadow-glow">
                 {selectedPatient?.fullName?.charAt(0) ?? "P"}
@@ -339,6 +413,16 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
           </aside>
 
           <section className="bg-ink/55">
+            {searchParams?.success ? (
+              <div className="border-b border-emerald-300/20 bg-emerald-300/10 px-6 py-3 text-center text-sm text-emerald-100">
+                {searchParams.success}
+              </div>
+            ) : null}
+            {searchParams?.error ? (
+              <div className="border-b border-rose-300/20 bg-rose-500/10 px-6 py-3 text-center text-sm text-rose-100">
+                {searchParams.error}
+              </div>
+            ) : null}
             <div className="bg-steel px-6 py-2 text-center text-lg font-bold uppercase text-white">
               {selectedPage === 2
                 ? "Recordatorio 24 horas"
@@ -802,7 +886,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                       <section>
                         <div className="text-center text-sm font-semibold">Comentarios generales</div>
                         <div className="mt-2 min-h-36 rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-[color:var(--text-soft)]">
-                          {profile?.notes || "Sin comentarios registrados en la ultima consulta."}
+                          {clinicalNotes.comments || "Sin comentarios registrados en la ultima consulta."}
                         </div>
                       </section>
                     </div>
@@ -893,25 +977,65 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 </section>
               </div>
             ) : (
-            <div className="px-6 py-6 lg:px-16">
+            <form action={saveClinicalHistoryAction} className="px-6 py-6 lg:px-16">
+              <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
+              <input name="page" type="hidden" value={selectedPage} />
               <section>
-                <h2 className="border-b-2 border-glow/60 pb-1 text-2xl uppercase text-glow">
-                  Antecedentes de salud
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-glow/60 pb-2">
+                  <h2 className="text-2xl uppercase text-glow">
+                    Antecedentes de salud
+                  </h2>
+                  <button
+                    className="rounded-xl bg-glow px-5 py-2 text-sm font-bold text-ink shadow-glow transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!selectedPatient}
+                    type="submit"
+                  >
+                    Guardar historia clinica
+                  </button>
+                </div>
                 <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_16rem]">
                   <dl className="grid gap-2 text-base">
                     <div className="grid grid-cols-[14rem_1fr] gap-4">
                       <dt>Motivo de consulta:</dt>
-                      <dd className="rounded-lg border border-mist/10 bg-white/5 px-3 py-1 text-center">{profile?.goal || "Pendiente"}</dd>
+                      <dd><EditableCell defaultValue={profile?.goal} name="goal" placeholder="Ej. Disminuir peso" /></dd>
                     </div>
-                    {["Padece alguna enfermedad?", "Toma medicamentos?", "Nombre / Dosis", "Consumo de alcohol", "Consumo de tabaco"].map(
-                      (label) => (
-                        <div className="grid grid-cols-[14rem_1fr] gap-4" key={label}>
-                          <dt>{label}</dt>
-                          <dd><EmptyCell /></dd>
-                        </div>
-                      )
-                    )}
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Padece alguna enfermedad?</dt>
+                      <dd><EditableCell defaultValue={clinicalNotes.disease} name="disease" placeholder="Ej. Sin diagnostico cronico" /></dd>
+                    </div>
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Toma medicamentos?</dt>
+                      <dd><EditableCell defaultValue={profile?.medications} name="medications" placeholder="Ej. No / Si" /></dd>
+                    </div>
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Nombre / Dosis</dt>
+                      <dd><EditableCell defaultValue={clinicalNotes.medicationNameDose} name="medicationNameDose" placeholder="Nombre y dosis" /></dd>
+                    </div>
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Consumo de alcohol</dt>
+                      <dd><EditableCell defaultValue={clinicalNotes.alcohol} name="alcohol" placeholder="Frecuencia" /></dd>
+                    </div>
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Consumo de tabaco</dt>
+                      <dd><EditableCell defaultValue={clinicalNotes.tobacco} name="tobacco" placeholder="Frecuencia" /></dd>
+                    </div>
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Alergias alimentarias</dt>
+                      <dd><EditableCell defaultValue={profile?.foodAllergies} name="foodAllergies" placeholder="Ej. Sin alergias reportadas" /></dd>
+                    </div>
+                    <div className="grid grid-cols-[14rem_1fr] gap-4">
+                      <dt>Peso actual (kg)</dt>
+                      <dd>
+                        <input
+                          className="min-h-7 w-full rounded-lg border border-mist/10 bg-white/5 px-3 py-1 text-center text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                          defaultValue={lastEntry?.weightKg ?? profile?.currentWeightKg ?? ""}
+                          name="weightKg"
+                          placeholder="Ej. 76"
+                          type="number"
+                          step="0.1"
+                        />
+                      </dd>
+                    </div>
                   </dl>
                 </div>
               </section>
@@ -967,9 +1091,11 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                     <div className="text-center text-lg font-semibold">
                       Aspecto general
                     </div>
-                    <div className="mt-2 min-h-28 rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-[color:var(--text-soft)]">
-                      Aspecto general normal
-                    </div>
+                    <textarea
+                      className="mt-2 min-h-28 w-full rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                      defaultValue={clinicalNotes.generalCondition}
+                      name="generalCondition"
+                    />
                   </div>
                 </div>
               </section>
@@ -1013,10 +1139,15 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                   Comentarios generales
                 </div>
                 <div className="mx-auto mt-8 min-h-36 max-w-3xl rounded-2xl border border-mist/10 bg-white/5 p-3 text-[color:var(--text-soft)]">
-                  {profile?.notes || "Sin comentarios generales registrados."}
+                  <textarea
+                    className="min-h-32 w-full resize-y bg-transparent text-white outline-none placeholder:text-slate-500"
+                    defaultValue={clinicalNotes.comments}
+                    name="comments"
+                    placeholder="Sin comentarios generales registrados."
+                  />
                 </div>
               </section>
-            </div>
+            </form>
             )}
           </section>
         </div>
