@@ -651,8 +651,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 </section>
               </div>
             ) : selectedPage === 3 ? (
-              <div className="grid lg:grid-cols-[1fr_1.05fr]">
-                <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
+              <div className="grid min-w-0">
+                <section className="min-w-0 border-b border-mist/15 px-6 py-6 lg:px-12">
                   <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
                     Antropometria
                   </div>
@@ -728,8 +728,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                   </div>
                 </section>
 
-                <section className="px-6 py-6 lg:px-12">
-                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+                <section className="min-w-0 px-6 py-6 lg:px-12">
+                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white break-words">
                     Resultados de antropometria
                   </div>
 
@@ -737,8 +737,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                     <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
                       Composicion corporal
                     </h2>
-                    <div className="mt-6 grid gap-8 xl:grid-cols-[0.78fr_1fr]">
-                      <div className="flex min-h-[32rem] items-center justify-center rounded-3xl border border-mist/10 bg-white/5 p-6">
+                    <div className="mt-6 grid min-w-0 gap-8 lg:grid-cols-[minmax(16rem,0.78fr)_minmax(20rem,1fr)]">
+                      <div className="flex min-h-[32rem] min-w-0 items-center justify-center rounded-3xl border border-mist/10 bg-white/5 p-6">
                         <div className="relative h-[28rem] w-48 opacity-90">
                           <div className="absolute left-1/2 top-0 h-16 w-14 -translate-x-1/2 rounded-full bg-glow/35" />
                           <div className="absolute left-1/2 top-14 h-40 w-24 -translate-x-1/2 rounded-[45%] bg-glow/35" />
@@ -755,11 +755,11 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                         </div>
                       </div>
 
-                      <div className="grid content-start gap-4">
+                      <div className="grid min-w-0 content-start gap-4">
                         <div className="grid gap-2">
                           {compositionRows.map((row, index) => (
-                            <div className="grid grid-cols-[1fr_8.5rem] items-center gap-3 text-sm" key={`${row.label}-${index}`}>
-                              <span className="text-right font-semibold uppercase text-white">{row.label}</span>
+                            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(7rem,8.5rem)] items-center gap-3 text-sm" key={`${row.label}-${index}`}>
+                              <span className="min-w-0 break-words text-right font-semibold uppercase text-white">{row.label}</span>
                               <span className="min-h-10 rounded-xl border border-mist/10 bg-white/5 px-3 py-2 text-center text-[color:var(--text-soft)]">
                                 {row.value}
                               </span>
@@ -767,7 +767,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           ))}
                         </div>
 
-                        <div className="mt-2 grid grid-cols-4 gap-3">
+                        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
                           {["ICC", "Grasa", "Musculo", "Residual"].map((label, index) => (
                             <div
                               className={`grid aspect-square place-items-center rounded-2xl border text-xs font-bold uppercase ${
