@@ -5,7 +5,6 @@ import { createClinicalDemoPatientAction, saveClinicalHistoryAction } from "@/ap
 import {
   biochemicalIndicators,
   calculateAge,
-  clinicalSections,
   familyHistoryRows,
   formatClinicalDate,
   getIndicatorPercent,
@@ -273,20 +272,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
               <div className="text-sm uppercase tracking-[0.22em] text-[color:var(--text-soft)]">Nutrition</div>
             </Link>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 px-6 py-5">
-            {clinicalSections.map((section, index) => (
-              <Link
-                className={`grid h-16 w-16 place-items-center rounded-full border border-mist/20 bg-ink/80 text-lg font-bold text-glow shadow-glow ${
-                  selectedPage === index + 1 ? "ring-4 ring-glow/40" : ""
-                }`}
-                href={buildClinicalPageHref(selectedPatient?.id, index + 1)}
-                key={section.value}
-                title={section.label}
-              >
-                {index + 1}
-              </Link>
-            ))}
-            <div className="ml-0 flex items-center gap-2 rounded-full border border-mist/15 bg-ink/70 px-4 py-2 text-sm text-[color:var(--text-soft)] lg:ml-4">
+          <div className="flex items-center justify-center px-6 py-5">
+            <div className="flex items-center gap-2 rounded-full border border-mist/15 bg-ink/70 px-4 py-2 text-sm text-[color:var(--text-soft)]">
               <span>Pagina</span>
               {clinicalPageNumbers.map((page) => (
                 <Link
