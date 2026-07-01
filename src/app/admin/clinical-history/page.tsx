@@ -4,9 +4,12 @@ import { UserRole } from "@prisma/client";
 import {
   createClinicalDemoPatientAction,
   saveClinicalAnthropometryAction,
+  saveClinicalFollowUpAction,
   saveClinicalFoodRecallAction,
+  saveClinicalFormulasAction,
   saveClinicalHistoryAction,
-  saveClinicalPatientSummaryAction
+  saveClinicalPatientSummaryAction,
+  saveClinicalProgressAction
 } from "@/app/auth-actions";
 import {
   biochemicalIndicators,
@@ -58,6 +61,23 @@ type ClinicalNotes = {
     skinfolds: Record<string, string>;
     diameters: Record<string, string>;
     composition: Record<string, string>;
+  };
+  formulas: {
+    date: string;
+    energy: Record<string, { tmb: string; af: string; eta: string }>;
+    idealWeight: Record<string, { value: string; difference: string }>;
+    complexion: Record<string, string>;
+    somatotype: Record<string, string>;
+  };
+  followUp: {
+    consultation: string;
+    health: Record<string, string>;
+    generalCondition: string;
+    comments: string;
+  };
+  progress: {
+    date: string;
+    metrics: Record<string, string[]>;
   };
 };
 
@@ -192,7 +212,10 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
       skinfolds: {},
       diameters: {},
       composition: {}
-    }
+    },
+    formulas: { date: "", energy: {}, idealWeight: {}, complexion: {}, somatotype: {} },
+    followUp: { consultation: "", health: {}, generalCondition: "Aspecto general normal", comments: "" },
+    progress: { date: "", metrics: {} }
   };
 
   if (!notes) {
@@ -218,7 +241,10 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
         skinfolds: {},
         diameters: {},
         composition: {}
-      }
+      },
+      formulas: parsed.formulas ?? { date: "", energy: {}, idealWeight: {}, complexion: {}, somatotype: {} },
+      followUp: parsed.followUp ?? { consultation: "", health: {}, generalCondition: "Aspecto general normal", comments: "" },
+      progress: parsed.progress ?? { date: "", metrics: {} }
     };
   } catch {
     return fallback;
@@ -311,6 +337,11 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
   const clinicalNotes = parseClinicalNotes(profile?.notes);
   const requestedPage = Number(searchParams?.page ?? 1);
   const selectedPage = clinicalPageNumbers.includes(requestedPage) ? requestedPage : 1;
+  const progressMetricKeys = ["weight", "fat", "muscle"];
+  const resolvedProgressMetrics = progressMetrics.map((metric, index) => ({
+    ...metric,
+    values: clinicalNotes.progress.metrics[progressMetricKeys[index]] ?? metric.values
+  }));
 
   return (
     <main className="px-4 py-6 text-white md:px-8">
@@ -863,10 +894,12 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 </section>
               </form>
             ) : selectedPage === 4 ? (
-              <div className="grid lg:grid-cols-[1fr_1.22fr]">
+              <form action={saveClinicalFormulasAction} className="grid xl:grid-cols-[1fr_1.22fr]">
+                <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
                 <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
-                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
-                    Formulas
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-steel px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+                    <span>Formulas</span>
+                    <button className="rounded-xl bg-glow px-4 py-2 text-xs text-ink shadow-glow disabled:opacity-50" disabled={!selectedPatient} type="submit">Guardar pagina 4</button>
                   </div>
 
                   <div className="mt-5">
@@ -886,9 +919,9 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           key={row.label}
                         >
                           <span className="px-3 py-2 font-medium">{row.label}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.tmb}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.af}</span>
-                          <span className="border-l border-mist/10 bg-glow/10 px-2 py-2 text-center font-bold text-glow">{row.eta}</span>
+                          {(["tmb", "af", "eta"] as const).map((key) => (
+                            <input className="min-w-0 border-l border-mist/10 bg-transparent px-1 py-2 text-center outline-none focus:bg-glow/10" defaultValue={clinicalNotes.formulas.energy[String(index)]?.[key] ?? row[key]} key={key} name={`energy_${index}_${key}`} />
+                          ))}
                         </div>
                       ))}
                     </div>
@@ -910,8 +943,8 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           key={row.label}
                         >
                           <span className="px-3 py-2 font-medium">{row.label}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.value}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center font-semibold text-rose-200">+ {row.difference}</span>
+                          <input className="min-w-0 border-l border-mist/10 bg-transparent px-1 py-2 text-center outline-none focus:bg-glow/10" defaultValue={clinicalNotes.formulas.idealWeight[String(index)]?.value ?? row.value} name={`idealWeight_${index}_value`} />
+                          <input className="min-w-0 border-l border-mist/10 bg-transparent px-1 py-2 text-center text-rose-200 outline-none focus:bg-glow/10" defaultValue={clinicalNotes.formulas.idealWeight[String(index)]?.difference ?? row.difference} name={`idealWeight_${index}_difference`} />
                         </div>
                       ))}
                     </div>
@@ -928,7 +961,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           key={`${row.label}-${index}`}
                         >
                           <span className="px-3 py-2 font-medium">{row.label}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center">{row.value}</span>
+                          <input className="min-w-0 border-l border-mist/10 bg-transparent px-2 py-2 text-center outline-none focus:bg-glow/10" defaultValue={clinicalNotes.formulas.complexion[String(index)] ?? row.value} name={`complexion_${index}`} />
                         </div>
                       ))}
                     </div>
@@ -943,16 +976,14 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                   <div className="mt-5">
                     <div className="grid items-end gap-4 sm:grid-cols-[1fr_11rem]">
                       <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">Somatocarta</h2>
-                      <div className="rounded-t-xl border border-glow/20 bg-glow/10 px-3 py-2 text-center text-sm font-semibold text-glow">
-                        11/03/2022
-                      </div>
+                      <input className="rounded-t-xl border border-glow/20 bg-glow/10 px-3 py-2 text-center text-sm font-semibold text-glow outline-none" defaultValue={clinicalNotes.formulas.date || "2022-03-11"} name="formulasDate" type="date" />
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 overflow-hidden rounded-xl border border-mist/10 text-center">
-                      {somatotypeRows.map((row) => (
+                      {somatotypeRows.map((row, index) => (
                         <div className="border-r border-mist/10 last:border-r-0" key={row.label}>
                           <div className="bg-white/10 px-2 py-2 text-xs uppercase tracking-wide text-[color:var(--text-soft)]">{row.label}</div>
-                          <div className="bg-white/5 px-2 py-2 text-sm font-semibold text-white">{row.value}</div>
+                          <input className="w-full min-w-0 bg-white/5 px-2 py-2 text-center text-sm font-semibold text-white outline-none focus:bg-glow/10" defaultValue={clinicalNotes.formulas.somatotype[String(index)] ?? row.value} name={`somatotype_${index}`} />
                         </div>
                       ))}
                     </div>
@@ -1001,14 +1032,16 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                     </div>
                   </div>
                 </section>
-              </div>
+              </form>
             ) : selectedPage === 5 ? (
-              <div className="px-6 py-7 lg:px-14">
+              <form action={saveClinicalFollowUpAction} className="px-6 py-7 lg:px-14">
+                <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
                 <section>
-                  <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
-                    Consulta de seguimiento
-                  </h2>
-                  <div className="mx-auto mt-8 h-12 max-w-3xl rounded-xl border border-glow/20 bg-glow/10" />
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-glow/60 pb-2">
+                    <h2 className="text-lg uppercase text-glow">Consulta de seguimiento</h2>
+                    <button className="rounded-xl bg-glow px-4 py-2 text-sm font-bold text-ink shadow-glow disabled:opacity-50" disabled={!selectedPatient} type="submit">Guardar pagina 5</button>
+                  </div>
+                  <textarea className="mx-auto mt-8 block min-h-24 w-full max-w-3xl rounded-xl border border-glow/20 bg-glow/10 p-3 text-white outline-none focus:border-glow" defaultValue={clinicalNotes.followUp.consultation} name="followUpConsultation" placeholder="Notas de la consulta de seguimiento" />
                 </section>
 
                 <section className="mt-12">
@@ -1022,10 +1055,10 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                         Antecedentes de salud
                       </h3>
                       <div className="mt-5 grid gap-2">
-                        {followUpHealthRows.map((row) => (
-                          <div className="grid grid-cols-[1fr_13rem] gap-4 text-sm" key={row}>
+                        {followUpHealthRows.map((row, index) => (
+                          <div className="grid gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)]" key={row}>
                             <span>{row}</span>
-                            <span className="min-h-7 rounded-lg border border-mist/10 bg-white/5" />
+                            <input className="min-h-9 min-w-0 rounded-lg border border-mist/10 bg-white/5 px-3 text-white outline-none focus:border-glow" defaultValue={clinicalNotes.followUp.health[String(index)] ?? ""} name={`followUpHealth_${index}`} />
                           </div>
                         ))}
                       </div>
@@ -1045,9 +1078,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                             key={row}
                           >
                             <span className="px-2 py-2 font-medium">{row}</span>
-                            <span className="border-l border-mist/10" />
-                            <span className="border-l border-mist/10" />
-                            <span className="border-l border-mist/10" />
+                            {(["mother", "father", "patient"] as const).map((relative) => <span className="grid place-items-center border-l border-mist/10" key={relative}>{clinicalNotes.familyHistory[row]?.[relative] ? "+" : ""}</span>)}
                           </div>
                         ))}
                       </div>
@@ -1061,30 +1092,51 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                         <div className="text-center text-sm font-semibold">
                           Aspecto general (cabello, ojos, piel, unas, labios, encias, etc.).
                         </div>
-                        <div className="mt-2 min-h-32 rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-[color:var(--text-soft)]">
-                          Aspecto general normal
-                        </div>
+                        <textarea className="mt-2 min-h-32 w-full rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-white outline-none focus:border-glow" defaultValue={clinicalNotes.followUp.generalCondition} name="followUpGeneralCondition" />
                       </section>
 
                       <section>
                         <div className="text-center text-sm font-semibold">Comentarios generales</div>
-                        <div className="mt-2 min-h-36 rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-[color:var(--text-soft)]">
-                          {clinicalNotes.comments || "Sin comentarios registrados en la ultima consulta."}
-                        </div>
+                        <textarea className="mt-2 min-h-36 w-full rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-white outline-none focus:border-glow" defaultValue={clinicalNotes.followUp.comments || clinicalNotes.comments} name="followUpComments" />
                       </section>
                     </div>
                   </div>
                 </section>
-              </div>
+              </form>
             ) : selectedPage === 6 ? (
-              <div className="grid min-h-[42rem] lg:grid-cols-[1.08fr_1fr]">
+              <form action={saveClinicalProgressAction} className="grid min-h-[42rem] xl:grid-cols-[1.08fr_1fr]">
+                <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
+                <section className="border-b border-mist/15 p-6 xl:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-bold uppercase text-glow">Datos de progreso</h2>
+                      <p className="mt-1 text-sm text-[color:var(--text-soft)]">Captura las tres mediciones que alimentan las graficas.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <input className="rounded-xl border border-mist/20 bg-white/5 px-3 py-2 text-white outline-none focus:border-glow" defaultValue={clinicalNotes.progress.date || "2022-03-15"} name="progressDate" type="date" />
+                      <button className="rounded-xl bg-glow px-4 py-2 text-sm font-bold text-ink shadow-glow disabled:opacity-50" disabled={!selectedPatient} type="submit">Guardar pagina 6</button>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid gap-4 md:grid-cols-3">
+                    {resolvedProgressMetrics.map((metric, metricIndex) => (
+                      <div className="rounded-2xl border border-mist/10 bg-white/5 p-4" key={metric.label}>
+                        <div className={`mb-3 text-sm font-bold uppercase ${metric.text}`}>{metric.label}</div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {metric.values.map((value, valueIndex) => (
+                            <input className="min-w-0 rounded-lg border border-mist/10 bg-ink/40 px-2 py-2 text-center text-white outline-none focus:border-glow" defaultValue={value} key={valueIndex} name={`progress_${progressMetricKeys[metricIndex]}_${valueIndex}`} type="number" step="0.1" />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
                 <section className="border-b border-mist/15 lg:border-b-0 lg:border-r">
                   <div className="grid grid-cols-[3rem_1fr] border-b border-mist/15">
                     <div className="grid place-items-center border-r border-mist/10 bg-glow/10 px-2 py-6">
                       <span className="-rotate-90 text-sm font-bold uppercase tracking-wide text-glow">Peso</span>
                     </div>
                     <div className="px-6 py-5">
-                      <ProgressChart metrics={[progressMetrics[0]]} height="h-44" />
+                      <ProgressChart metrics={[resolvedProgressMetrics[0]]} height="h-44" />
                     </div>
                   </div>
 
@@ -1093,7 +1145,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                       <span className="-rotate-90 text-sm font-bold uppercase tracking-wide text-amber-200">Grasa</span>
                     </div>
                     <div className="px-6 py-5">
-                      <ProgressChart metrics={[progressMetrics[1]]} height="h-44" />
+                      <ProgressChart metrics={[resolvedProgressMetrics[1]]} height="h-44" />
                     </div>
                   </div>
 
@@ -1104,9 +1156,9 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                       </span>
                     </div>
                     <div className="px-6 py-8">
-                      <ProgressChart metrics={progressMetrics} height="h-64" />
+                      <ProgressChart metrics={resolvedProgressMetrics} height="h-64" />
                       <div className="mt-5 flex flex-wrap justify-center gap-3 text-xs uppercase text-[color:var(--text-soft)]">
-                        {progressMetrics.map((metric) => (
+                        {resolvedProgressMetrics.map((metric) => (
                           <span className="flex items-center gap-2" key={metric.label}>
                             <i className={`h-2.5 w-2.5 rounded-full ${metric.band}`} />
                             {metric.label}
@@ -1120,10 +1172,10 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 <section className="px-6 py-7 lg:px-12">
                   <div className="grid max-w-sm gap-3">
                     <span className="w-fit rounded-lg border border-mist/25 bg-white/5 px-3 py-2 text-xs text-[color:var(--text-soft)]">
-                      21 % Musculo
+                      {resolvedProgressMetrics[2].values.at(-1)} % Musculo
                     </span>
                     <span className="w-fit rounded-lg border border-amber-300/50 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
-                      21 % Grasa
+                      {resolvedProgressMetrics[1].values.at(-1)} % Grasa
                     </span>
                   </div>
 
@@ -1146,10 +1198,10 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-3">
                     {[
-                      ["Ultima cita", "15/03/2022"],
-                      ["Peso", `${lastEntry?.weightKg ?? profile?.currentWeightKg ?? 73} kg`],
-                      ["Grasa", "21%"],
-                      ["Musculo", "21%"]
+                      ["Ultima cita", clinicalNotes.progress.date || "2022-03-15"],
+                      ["Peso", `${resolvedProgressMetrics[0].values.at(-1)} kg`],
+                      ["Grasa", `${resolvedProgressMetrics[1].values.at(-1)}%`],
+                      ["Musculo", `${resolvedProgressMetrics[2].values.at(-1)}%`]
                     ].map(([label, value]) => (
                       <div className="rounded-2xl border border-mist/10 bg-white/5 p-4 text-center" key={label}>
                         <div className="text-xs font-bold uppercase text-glow">{label}</div>
@@ -1158,7 +1210,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                     ))}
                   </div>
                 </section>
-              </div>
+              </form>
             ) : (
             <form action={saveClinicalHistoryAction} className="px-6 py-6 lg:px-16">
               <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />

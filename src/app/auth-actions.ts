@@ -524,6 +524,98 @@ export async function saveClinicalAnthropometryAction(formData: FormData) {
   redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=3&success=Antropometria%20guardada.`);
 }
 
+export async function saveClinicalFormulasAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+  if (!userId) {
+    redirect("/admin/clinical-history?page=4&error=Selecciona%20un%20paciente%20antes%20de%20guardar.");
+  }
+
+  const existingProfile = await prisma.patientProfile.findUnique({ where: { userId }, select: { notes: true } });
+  const formulas = {
+    date: getField(formData, "formulasDate"),
+    energy: Object.fromEntries(Array.from({ length: 4 }, (_, index) => [String(index), {
+      tmb: getField(formData, `energy_${index}_tmb`).trim(),
+      af: getField(formData, `energy_${index}_af`).trim(),
+      eta: getField(formData, `energy_${index}_eta`).trim()
+    }])),
+    idealWeight: Object.fromEntries(Array.from({ length: 3 }, (_, index) => [String(index), {
+      value: getField(formData, `idealWeight_${index}_value`).trim(),
+      difference: getField(formData, `idealWeight_${index}_difference`).trim()
+    }])),
+    complexion: Object.fromEntries(Array.from({ length: 4 }, (_, index) => [String(index), getField(formData, `complexion_${index}`).trim()])),
+    somatotype: Object.fromEntries(Array.from({ length: 3 }, (_, index) => [String(index), getField(formData, `somatotype_${index}`).trim()]))
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: { notes: JSON.stringify({ ...parseClinicalNotesJson(existingProfile?.notes), formulas }) },
+      create: { userId, patientCode: await generatePatientCode(tx), notes: JSON.stringify({ formulas }) }
+    });
+  });
+
+  revalidatePath("/admin/clinical-history");
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=4&success=Formulas%20guardadas.`);
+}
+
+export async function saveClinicalFollowUpAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+  if (!userId) {
+    redirect("/admin/clinical-history?page=5&error=Selecciona%20un%20paciente%20antes%20de%20guardar.");
+  }
+
+  const existingProfile = await prisma.patientProfile.findUnique({ where: { userId }, select: { notes: true } });
+  const followUp = {
+    consultation: getField(formData, "followUpConsultation").trim(),
+    health: Object.fromEntries(Array.from({ length: 6 }, (_, index) => [String(index), getField(formData, `followUpHealth_${index}`).trim()])),
+    generalCondition: getField(formData, "followUpGeneralCondition").trim(),
+    comments: getField(formData, "followUpComments").trim()
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: { notes: JSON.stringify({ ...parseClinicalNotesJson(existingProfile?.notes), followUp }) },
+      create: { userId, patientCode: await generatePatientCode(tx), notes: JSON.stringify({ followUp }) }
+    });
+  });
+
+  revalidatePath("/admin/clinical-history");
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=5&success=Seguimiento%20guardado.`);
+}
+
+export async function saveClinicalProgressAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+  if (!userId) {
+    redirect("/admin/clinical-history?page=6&error=Selecciona%20un%20paciente%20antes%20de%20guardar.");
+  }
+
+  const existingProfile = await prisma.patientProfile.findUnique({ where: { userId }, select: { notes: true } });
+  const progress = {
+    date: getField(formData, "progressDate"),
+    metrics: Object.fromEntries(["weight", "fat", "muscle"].map((key) => [key,
+      Array.from({ length: 3 }, (_, index) => getField(formData, `progress_${key}_${index}`).trim())
+    ]))
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: { notes: JSON.stringify({ ...parseClinicalNotesJson(existingProfile?.notes), progress }) },
+      create: { userId, patientCode: await generatePatientCode(tx), notes: JSON.stringify({ progress }) }
+    });
+  });
+
+  revalidatePath("/admin/clinical-history");
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=6&success=Progreso%20guardado.`);
+}
+
 export async function saveClinicalPatientSummaryAction(formData: FormData) {
   await requireRole(UserRole.ADMIN);
 
