@@ -41,6 +41,7 @@ type ClinicalNotes = {
       patient: boolean;
     }
   >;
+  gynecological: Record<string, string>;
 };
 
 const clinicalPageNumbers = [1, 2, 3, 4, 5, 6];
@@ -125,10 +126,6 @@ function formatDateInput(value?: Date | null) {
   return value ? value.toISOString().slice(0, 10) : "";
 }
 
-function EmptyCell() {
-  return <span className="block min-h-7 rounded-lg border border-mist/10 bg-white/5" />;
-}
-
 function EditableCell({
   name,
   defaultValue,
@@ -156,7 +153,8 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
     tobacco: "",
     generalCondition: "Aspecto general normal",
     comments: notes ?? "",
-    familyHistory: {}
+    familyHistory: {},
+    gynecological: {}
   };
 
   if (!notes) {
@@ -173,7 +171,8 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
       tobacco: parsed.tobacco ?? "",
       generalCondition: parsed.generalCondition ?? "Aspecto general normal",
       comments: parsed.comments ?? "",
-      familyHistory: parsed.familyHistory ?? {}
+      familyHistory: parsed.familyHistory ?? {},
+      gynecological: parsed.gynecological ?? {}
     };
   } catch {
     return fallback;
@@ -1151,31 +1150,36 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 <p className="mt-3 text-right text-sm font-semibold italic">Marcar (+) si lo padece.</p>
               </section>
 
-              <section className="mt-12 grid gap-10 lg:grid-cols-2">
-                <div>
+              <section className="mt-12 grid min-w-0 gap-10 xl:grid-cols-2">
+                <div className="min-w-0">
                   <h2 className="border-b-2 border-glow/60 pb-1 text-2xl uppercase text-glow">
                     Aspectos ginecologicos
                   </h2>
                   <div className="mt-6 grid gap-2">
-                    {gynecologicalRows.map((row) => (
-                      <div className="grid grid-cols-[1fr_16rem] gap-6" key={row}>
-                        <span>{row}</span>
-                        <EmptyCell />
+                    {gynecologicalRows.map((row, index) => (
+                      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:items-center" key={row}>
+                        <label htmlFor={`gynecological_${index}`}>{row}</label>
+                        <input
+                          className="min-h-10 min-w-0 w-full rounded-lg border border-mist/10 bg-white/5 px-3 py-2 text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                          defaultValue={clinicalNotes.gynecological[String(index)] ?? ""}
+                          id={`gynecological_${index}`}
+                          name={`gynecological_${index}`}
+                        />
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <h2 className="border-b-2 border-glow/60 pb-1 text-2xl uppercase text-glow">
                     Signos y sintomas
                   </h2>
-                  <div className="mt-6">
+                  <div className="mt-6 min-w-0">
                     <div className="text-center text-lg font-semibold">
                       Aspecto general
                     </div>
                     <textarea
-                      className="mt-2 min-h-28 w-full rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
+                      className="mt-2 block min-h-36 w-full max-w-full resize-y rounded-2xl border border-mist/10 bg-white/5 p-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-glow"
                       defaultValue={clinicalNotes.generalCondition}
                       name="generalCondition"
                     />

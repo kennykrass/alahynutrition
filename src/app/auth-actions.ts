@@ -334,6 +334,12 @@ export async function saveClinicalHistoryAction(formData: FormData) {
           patient: getField(formData, `familyHistory_${index}_patient`) === "on"
         }
       ])
+    ),
+    gynecological: Object.fromEntries(
+      Array.from({ length: 5 }, (_, index) => [
+        String(index),
+        getField(formData, `gynecological_${index}`).trim()
+      ])
     )
   };
 
