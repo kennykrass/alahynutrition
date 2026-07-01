@@ -324,7 +324,17 @@ export async function saveClinicalHistoryAction(formData: FormData) {
     alcohol: getField(formData, "alcohol").trim(),
     tobacco: getField(formData, "tobacco").trim(),
     generalCondition: getField(formData, "generalCondition").trim(),
-    comments: getField(formData, "comments").trim()
+    comments: getField(formData, "comments").trim(),
+    familyHistory: Object.fromEntries(
+      Array.from({ length: 6 }, (_, index) => [
+        String(index),
+        {
+          mother: getField(formData, `familyHistory_${index}_mother`) === "on",
+          father: getField(formData, `familyHistory_${index}_father`) === "on",
+          patient: getField(formData, `familyHistory_${index}_patient`) === "on"
+        }
+      ])
+    )
   };
 
   const existingEntry = await prisma.progressEntry.findFirst({

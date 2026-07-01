@@ -33,6 +33,14 @@ type ClinicalNotes = {
   tobacco: string;
   generalCondition: string;
   comments: string;
+  familyHistory: Record<
+    string,
+    {
+      mother: boolean;
+      father: boolean;
+      patient: boolean;
+    }
+  >;
 };
 
 const clinicalPageNumbers = [1, 2, 3, 4, 5, 6];
@@ -147,7 +155,8 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
     alcohol: "",
     tobacco: "",
     generalCondition: "Aspecto general normal",
-    comments: notes ?? ""
+    comments: notes ?? "",
+    familyHistory: {}
   };
 
   if (!notes) {
@@ -163,7 +172,8 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
       alcohol: parsed.alcohol ?? "",
       tobacco: parsed.tobacco ?? "",
       generalCondition: parsed.generalCondition ?? "Aspecto general normal",
-      comments: parsed.comments ?? ""
+      comments: parsed.comments ?? "",
+      familyHistory: parsed.familyHistory ?? {}
     };
   } catch {
     return fallback;
@@ -1121,9 +1131,20 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                       key={row}
                     >
                       <span className="px-2 py-2 font-semibold">{row}</span>
-                      <span className="border-l border-mist/10" />
-                      <span className="border-l border-mist/10" />
-                      <span className="border-l border-mist/10" />
+                      {(["mother", "father", "patient"] as const).map((relative) => (
+                        <label
+                          className="grid min-h-10 cursor-pointer place-items-center border-l border-mist/10 transition hover:bg-glow/10"
+                          key={relative}
+                        >
+                          <input
+                            aria-label={`${row} - ${relative}`}
+                            className="h-5 w-5 cursor-pointer accent-cyan-400"
+                            defaultChecked={clinicalNotes.familyHistory[String(index)]?.[relative] ?? false}
+                            name={`familyHistory_${index}_${relative}`}
+                            type="checkbox"
+                          />
+                        </label>
+                      ))}
                     </div>
                   ))}
                 </div>
