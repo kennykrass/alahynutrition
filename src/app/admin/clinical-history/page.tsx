@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
-import { createClinicalDemoPatientAction, saveClinicalHistoryAction } from "@/app/auth-actions";
+import {
+  createClinicalDemoPatientAction,
+  saveClinicalHistoryAction,
+  saveClinicalPatientSummaryAction
+} from "@/app/auth-actions";
 import {
   biochemicalIndicators,
   calculateAge,
   familyHistoryRows,
-  formatClinicalDate,
   getIndicatorPercent,
   gynecologicalRows
 } from "@/lib/clinical-history";
@@ -110,16 +113,8 @@ function buildClinicalPageHref(patientId: string | undefined, page: number) {
   return `/admin/clinical-history${query ? `?${query}` : ""}`;
 }
 
-function formatSex(value?: string | null) {
-  if (value === "MALE") {
-    return "Masculino";
-  }
-
-  if (value === "FEMALE") {
-    return "Femenino";
-  }
-
-  return "Pendiente";
+function formatDateInput(value?: Date | null) {
+  return value ? value.toISOString().slice(0, 10) : "";
 }
 
 function EmptyCell() {
@@ -348,7 +343,10 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
               </p>
             </form>
 
-            <section className="p-6 text-center">
+            <form action={saveClinicalPatientSummaryAction} className="text-center">
+              <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
+              <input name="page" type="hidden" value={selectedPage} />
+              <section className="p-6">
               <div className="mx-auto grid h-28 w-28 place-items-center rounded-full border-4 border-glow/50 bg-steel text-5xl text-white shadow-glow">
                 {selectedPatient?.fullName?.charAt(0) ?? "P"}
               </div>
@@ -360,45 +358,120 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
               <dl className="mt-4 grid gap-2 text-sm">
                 <div>
                   <dt className="font-bold uppercase text-[color:var(--text-soft)]">Nombre</dt>
-                  <dd className="mt-1 rounded-lg border border-glow/20 bg-glow/10 px-3 py-1 text-lg font-semibold text-glow">
-                    {selectedPatient?.fullName ?? "Sin paciente"}
+                  <dd>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-glow/20 bg-glow/10 px-3 py-2 text-center text-lg font-semibold text-glow outline-none transition focus:border-glow"
+                      defaultValue={selectedPatient?.fullName ?? ""}
+                      name="fullName"
+                      placeholder="Nombre del paciente"
+                      required
+                    />
                   </dd>
                 </div>
                 <div>
                   <dt className="font-bold uppercase text-[color:var(--text-soft)]">Sexo</dt>
-                  <dd className="mt-1 rounded-lg border border-mist/10 bg-white/5 px-3 py-1">{formatSex(profile?.biologicalSex)}</dd>
+                  <dd>
+                    <select
+                      className="mt-1 w-full rounded-lg border border-mist/10 bg-ink/80 px-3 py-2 text-center text-white outline-none transition focus:border-glow"
+                      defaultValue={profile?.biologicalSex ?? ""}
+                      name="biologicalSex"
+                      required
+                    >
+                      <option disabled value="">Seleccionar</option>
+                      <option value="MALE">Masculino</option>
+                      <option value="FEMALE">Femenino</option>
+                    </select>
+                  </dd>
                 </div>
                 <div>
                   <dt className="font-bold uppercase text-[color:var(--text-soft)]">Talla (m)</dt>
-                  <dd className="mt-1 rounded-lg border border-mist/10 bg-white/5 px-3 py-1">
-                    {profile?.heightCm ? (profile.heightCm / 100).toFixed(2) : "Pendiente"}
+                  <dd>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-mist/10 bg-white/5 px-3 py-2 text-center text-white outline-none transition focus:border-glow"
+                      defaultValue={profile?.heightCm ? (profile.heightCm / 100).toFixed(2) : ""}
+                      max="2.5"
+                      min="1"
+                      name="heightM"
+                      required
+                      step="0.01"
+                      type="number"
+                    />
                   </dd>
                 </div>
                 <div>
                   <dt className="font-bold uppercase text-[color:var(--text-soft)]">Edad</dt>
-                  <dd className="mt-1 rounded-lg border border-mist/10 bg-white/5 px-3 py-1">{age ?? "Pendiente"}</dd>
+                  <dd>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-mist/10 bg-white/5 px-3 py-2 text-center text-white outline-none transition focus:border-glow"
+                      defaultValue={age ?? ""}
+                      max="120"
+                      min="10"
+                      name="age"
+                      required
+                      type="number"
+                    />
+                  </dd>
                 </div>
               </dl>
-            </section>
+              </section>
 
-            <section className="border-t border-mist/15 bg-steel/50 px-6 py-5 text-center text-white">
-              <div className="font-bold uppercase">Fecha de registro</div>
-              <div className="mt-1 rounded-lg bg-white/10 px-3 py-1 text-white">
-                {formatClinicalDate(selectedPatient?.createdAt)}
-              </div>
-              <div className="mt-3 font-bold uppercase">Peso (kg)</div>
-              <div className="mt-1 rounded-lg bg-white/10 px-3 py-1 text-white">
-                {lastEntry?.weightKg ?? profile?.currentWeightKg ?? "Pendiente"}
-              </div>
-              <div className="mt-3 font-bold uppercase">Nivel de act. fisica</div>
-              <div className="mt-1 rounded-lg bg-white/10 px-3 py-1 text-white">
-                {profile?.physicalActivityLevel ?? "Pendiente"}
-              </div>
-              <div className="mt-3 font-bold uppercase">Objetivo</div>
-              <div className="mt-1 rounded-lg bg-white/10 px-3 py-1 text-white">
-                {profile?.goal || "Pendiente"}
-              </div>
-            </section>
+              <section className="border-t border-mist/15 bg-steel/50 px-6 py-5 text-white">
+                <label className="block font-bold uppercase">
+                  Fecha de registro
+                  <input
+                    className="mt-1 w-full rounded-lg border border-mist/10 bg-white/10 px-3 py-2 text-center text-white outline-none transition focus:border-glow"
+                    defaultValue={formatDateInput(selectedPatient?.createdAt)}
+                    name="registrationDate"
+                    required
+                    type="date"
+                  />
+                </label>
+                <label className="mt-3 block font-bold uppercase">
+                  Peso (kg)
+                  <input
+                    className="mt-1 w-full rounded-lg border border-mist/10 bg-white/10 px-3 py-2 text-center text-white outline-none transition focus:border-glow"
+                    defaultValue={lastEntry?.weightKg ?? profile?.currentWeightKg ?? ""}
+                    max="400"
+                    min="20"
+                    name="weightKg"
+                    required
+                    step="0.1"
+                    type="number"
+                  />
+                </label>
+                <label className="mt-3 block font-bold uppercase">
+                  Nivel de act. fisica
+                  <select
+                    className="mt-1 w-full rounded-lg border border-mist/10 bg-ink/80 px-3 py-2 text-center text-white outline-none transition focus:border-glow"
+                    defaultValue={profile?.physicalActivityLevel ?? ""}
+                    name="physicalActivityLevel"
+                    required
+                  >
+                    <option disabled value="">Seleccionar</option>
+                    <option value="NONE">Ninguna</option>
+                    <option value="LIGHT">Ligera</option>
+                    <option value="MODERATE">Moderada</option>
+                    <option value="INTENSE">Intensa</option>
+                  </select>
+                </label>
+                <label className="mt-3 block font-bold uppercase">
+                  Objetivo
+                  <input
+                    className="mt-1 w-full rounded-lg border border-mist/10 bg-white/10 px-3 py-2 text-center font-normal normal-case text-white outline-none transition focus:border-glow"
+                    defaultValue={profile?.goal ?? ""}
+                    name="goal"
+                    placeholder="Objetivo del paciente"
+                  />
+                </label>
+                <button
+                  className="mt-5 w-full rounded-xl bg-glow px-4 py-3 text-sm font-bold text-ink shadow-glow transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!selectedPatient}
+                  type="submit"
+                >
+                  Guardar ficha tecnica
+                </button>
+              </section>
+            </form>
           </aside>
 
           <section className="bg-ink/55">

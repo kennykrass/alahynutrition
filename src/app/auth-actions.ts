@@ -3,9 +3,11 @@
 import {
   AppointmentStatus,
   AppointmentType,
+  BiologicalSex,
   CareType,
   PatientDocumentCategory,
   PatientStatus,
+  PhysicalActivityLevel,
   PlanDuration,
   Prisma,
   UserRole,
@@ -374,6 +376,118 @@ export async function saveClinicalHistoryAction(formData: FormData) {
   revalidatePath("/admin/clinical-history");
   revalidatePath(`/admin/patients/${userId}`);
   redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=${encodeURIComponent(page)}&success=Historia%20clinica%20guardada.`);
+}
+
+export async function saveClinicalPatientSummaryAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+  const page = getField(formData, "page") || "1";
+  const fullName = getField(formData, "fullName").trim();
+  const biologicalSex = getField(formData, "biologicalSex") as BiologicalSex;
+  const physicalActivityLevel = getField(formData, "physicalActivityLevel") as PhysicalActivityLevel;
+  const heightM = Number(getField(formData, "heightM"));
+  const age = Number(getField(formData, "age"));
+  const weightKg = Number(getField(formData, "weightKg"));
+  const registrationDate = new Date(`${getField(formData, "registrationDate")}T12:00:00`);
+
+  const redirectPath = `/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=${encodeURIComponent(page)}`;
+
+  if (!userId || fullName.length < 3) {
+    redirect(`${redirectPath}&error=Escribe%20un%20nombre%20valido.`);
+  }
+
+  if (!Object.values(BiologicalSex).includes(biologicalSex)) {
+    redirect(`${redirectPath}&error=Selecciona%20un%20sexo%20valido.`);
+  }
+
+  if (!Object.values(PhysicalActivityLevel).includes(physicalActivityLevel)) {
+    redirect(`${redirectPath}&error=Selecciona%20un%20nivel%20de%20actividad%20valido.`);
+  }
+
+  if (!Number.isFinite(heightM) || heightM < 1 || heightM > 2.5) {
+    redirect(`${redirectPath}&error=La%20talla%20debe%20estar%20entre%201%20y%202.5%20metros.`);
+  }
+
+  if (!Number.isInteger(age) || age < 10 || age > 120) {
+    redirect(`${redirectPath}&error=La%20edad%20debe%20estar%20entre%2010%20y%20120%20anos.`);
+  }
+
+  if (!Number.isFinite(weightKg) || weightKg < 20 || weightKg > 400) {
+    redirect(`${redirectPath}&error=El%20peso%20debe%20estar%20entre%2020%20y%20400%20kg.`);
+  }
+
+  if (Number.isNaN(registrationDate.getTime())) {
+    redirect(`${redirectPath}&error=Selecciona%20una%20fecha%20de%20registro%20valida.`);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true }
+  });
+
+  if (!user || user.role !== UserRole.PATIENT) {
+    redirect("/admin/clinical-history?error=El%20paciente%20ya%20no%20existe.");
+  }
+
+  const birthDate = new Date();
+  birthDate.setHours(12, 0, 0, 0);
+  birthDate.setFullYear(birthDate.getFullYear() - age);
+
+  const existingEntry = await prisma.progressEntry.findFirst({
+    where: { userId },
+    orderBy: { loggedAt: "desc" },
+    select: { id: true }
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        fullName,
+        createdAt: registrationDate
+      }
+    });
+
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: {
+        birthDate,
+        biologicalSex,
+        heightCm: heightM * 100,
+        currentWeightKg: weightKg,
+        physicalActivityLevel,
+        goal: getField(formData, "goal").trim() || null
+      },
+      create: {
+        userId,
+        patientCode: await generatePatientCode(tx),
+        birthDate,
+        biologicalSex,
+        heightCm: heightM * 100,
+        initialWeightKg: weightKg,
+        currentWeightKg: weightKg,
+        physicalActivityLevel,
+        goal: getField(formData, "goal").trim() || null
+      }
+    });
+
+    if (existingEntry) {
+      await tx.progressEntry.update({
+        where: { id: existingEntry.id },
+        data: { weightKg }
+      });
+    } else {
+      await tx.progressEntry.create({
+        data: { userId, weightKg }
+      });
+    }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/clinical-history");
+  revalidatePath(`/admin/patients/${userId}`);
+  redirect(`${redirectPath}&success=Ficha%20tecnica%20guardada.`);
 }
 
 export async function createPatientByAdminAction(formData: FormData) {
