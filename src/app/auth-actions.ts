@@ -292,6 +292,19 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+function parseClinicalNotesJson(notes?: string | null): Record<string, unknown> {
+  if (!notes) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(notes);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return { comments: notes };
+  }
+}
+
 export async function createClinicalDemoPatientAction() {
   await requireRole(UserRole.ADMIN);
 
@@ -318,7 +331,13 @@ export async function saveClinicalHistoryAction(formData: FormData) {
     redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=${encodeURIComponent(page)}&error=El%20peso%20debe%20ser%20un%20numero%20valido.`);
   }
 
+  const existingProfile = await prisma.patientProfile.findUnique({
+    where: { userId },
+    select: { notes: true }
+  });
+
   const notesPayload = {
+    ...parseClinicalNotesJson(existingProfile?.notes),
     disease: getField(formData, "disease").trim(),
     medicationNameDose: getField(formData, "medicationNameDose").trim(),
     alcohol: getField(formData, "alcohol").trim(),
@@ -392,6 +411,52 @@ export async function saveClinicalHistoryAction(formData: FormData) {
   revalidatePath("/admin/clinical-history");
   revalidatePath(`/admin/patients/${userId}`);
   redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=${encodeURIComponent(page)}&success=Historia%20clinica%20guardada.`);
+}
+
+export async function saveClinicalFoodRecallAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+
+  if (!userId) {
+    redirect("/admin/clinical-history?page=2&error=Selecciona%20un%20paciente%20antes%20de%20guardar.");
+  }
+
+  const existingProfile = await prisma.patientProfile.findUnique({
+    where: { userId },
+    select: { notes: true }
+  });
+  const mealKeys = ["breakfast", "lunch", "dinner"];
+  const foodRecall = Object.fromEntries(
+    mealKeys.map((mealKey) => [
+      mealKey,
+      Array.from({ length: 6 }, (_, index) => ({
+        name: getField(formData, `foodRecall_${mealKey}_${index}_name`).trim(),
+        quantity: getField(formData, `foodRecall_${mealKey}_${index}_quantity`).trim(),
+        unit: getField(formData, `foodRecall_${mealKey}_${index}_unit`).trim()
+      }))
+    ])
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: {
+        notes: JSON.stringify({
+          ...parseClinicalNotesJson(existingProfile?.notes),
+          foodRecall
+        })
+      },
+      create: {
+        userId,
+        patientCode: await generatePatientCode(tx),
+        notes: JSON.stringify({ foodRecall })
+      }
+    });
+  });
+
+  revalidatePath("/admin/clinical-history");
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=2&success=Recordatorio%20de%2024%20horas%20guardado.`);
 }
 
 export async function saveClinicalPatientSummaryAction(formData: FormData) {

@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 
 import {
   createClinicalDemoPatientAction,
+  saveClinicalFoodRecallAction,
   saveClinicalHistoryAction,
   saveClinicalPatientSummaryAction
 } from "@/app/auth-actions";
@@ -42,10 +43,19 @@ type ClinicalNotes = {
     }
   >;
   gynecological: Record<string, string>;
+  foodRecall: Record<
+    string,
+    Array<{
+      name: string;
+      quantity: string;
+      unit: string;
+    }>
+  >;
 };
 
 const clinicalPageNumbers = [1, 2, 3, 4, 5, 6];
 const recallMeals = ["Desayuno", "Comida", "Cena"];
+const recallMealKeys = ["breakfast", "lunch", "dinner"];
 const macroRows = ["Kcal", "HCO", "PT", "LP"];
 const circumferenceRows = [
   ["Cintura", "100"],
@@ -154,7 +164,8 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
     generalCondition: "Aspecto general normal",
     comments: notes ?? "",
     familyHistory: {},
-    gynecological: {}
+    gynecological: {},
+    foodRecall: {}
   };
 
   if (!notes) {
@@ -172,7 +183,8 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
       generalCondition: parsed.generalCondition ?? "Aspecto general normal",
       comments: parsed.comments ?? "",
       familyHistory: parsed.familyHistory ?? {},
-      gynecological: parsed.gynecological ?? {}
+      gynecological: parsed.gynecological ?? {},
+      foodRecall: parsed.foodRecall ?? {}
     };
   } catch {
     return fallback;
@@ -510,16 +522,24 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
 
             {selectedPage === 2 ? (
               <div className="grid lg:grid-cols-[1fr_1.06fr]">
-                <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
+                <form action={saveClinicalFoodRecallAction} className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
+                  <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
                   <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
                     Recordatorio 24 horas
                   </div>
 
                   <div className="mt-5">
-                    <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
-                      Alimentos consumidos
-                    </h2>
-                    {recallMeals.map((meal) => (
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-glow/60 pb-2">
+                      <h2 className="text-lg uppercase text-glow">Alimentos consumidos</h2>
+                      <button
+                        className="rounded-xl bg-glow px-4 py-2 text-xs font-bold text-ink shadow-glow transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!selectedPatient}
+                        type="submit"
+                      >
+                        Guardar recordatorio
+                      </button>
+                    </div>
+                    {recallMeals.map((meal, mealIndex) => (
                       <div className="mt-5" key={meal}>
                         <div className="text-right text-sm font-semibold text-[color:var(--text-soft)]">{meal}</div>
                         <div className="grid grid-cols-[1.25fr_0.7fr_0.85fr] border-b border-glow/60 pb-1 text-center text-xs uppercase tracking-wide text-[color:var(--text-soft)]">
@@ -528,23 +548,43 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           <span>U. medida</span>
                         </div>
                         <div className="mt-1 grid gap-1">
-                          {Array.from({ length: 6 }).map((_, rowIndex) => (
-                            <div
-                              className={`grid min-h-7 grid-cols-[1.25fr_0.7fr_0.85fr] rounded-lg border border-mist/10 ${
-                                rowIndex % 2 === 0 ? "bg-white/5" : "bg-white/10"
-                              }`}
-                              key={rowIndex}
-                            >
-                              <span />
-                              <span className="border-l border-mist/10" />
-                              <span className="border-l border-mist/10" />
-                            </div>
-                          ))}
+                          {Array.from({ length: 6 }).map((_, rowIndex) => {
+                            const mealKey = recallMealKeys[mealIndex];
+                            const entry = clinicalNotes.foodRecall[mealKey]?.[rowIndex];
+
+                            return (
+                              <div
+                                className={`grid min-h-10 grid-cols-[1.25fr_0.7fr_0.85fr] overflow-hidden rounded-lg border border-mist/10 ${
+                                  rowIndex % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                                }`}
+                                key={rowIndex}
+                              >
+                              <input
+                                aria-label={`${meal} alimento ${rowIndex + 1}`}
+                                className="min-w-0 bg-transparent px-3 py-2 text-white outline-none focus:bg-glow/10"
+                                defaultValue={entry?.name ?? ""}
+                                name={`foodRecall_${mealKey}_${rowIndex}_name`}
+                              />
+                              <input
+                                aria-label={`${meal} cantidad ${rowIndex + 1}`}
+                                className="min-w-0 border-l border-mist/10 bg-transparent px-2 py-2 text-center text-white outline-none focus:bg-glow/10"
+                                defaultValue={entry?.quantity ?? ""}
+                                name={`foodRecall_${mealKey}_${rowIndex}_quantity`}
+                              />
+                              <input
+                                aria-label={`${meal} unidad ${rowIndex + 1}`}
+                                className="min-w-0 border-l border-mist/10 bg-transparent px-2 py-2 text-center text-white outline-none focus:bg-glow/10"
+                                defaultValue={entry?.unit ?? ""}
+                                name={`foodRecall_${mealKey}_${rowIndex}_unit`}
+                              />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
                   </div>
-                </section>
+                </form>
 
                 <section className="px-6 py-6 lg:px-12">
                   <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
