@@ -459,6 +459,71 @@ export async function saveClinicalFoodRecallAction(formData: FormData) {
   redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=2&success=Recordatorio%20de%2024%20horas%20guardado.`);
 }
 
+export async function saveClinicalAnthropometryAction(formData: FormData) {
+  await requireRole(UserRole.ADMIN);
+
+  const userId = getField(formData, "userId");
+
+  if (!userId) {
+    redirect("/admin/clinical-history?page=3&error=Selecciona%20un%20paciente%20antes%20de%20guardar.");
+  }
+
+  const existingProfile = await prisma.patientProfile.findUnique({
+    where: { userId },
+    select: { notes: true }
+  });
+  const anthropometry = {
+    date: getField(formData, "anthropometryDate"),
+    circumferences: Object.fromEntries(
+      Array.from({ length: 7 }, (_, index) => [
+        String(index),
+        {
+          previous: getField(formData, `circumference_${index}_previous`).trim(),
+          current: getField(formData, `circumference_${index}_current`).trim()
+        }
+      ])
+    ),
+    skinfolds: Object.fromEntries(
+      Array.from({ length: 9 }, (_, index) => [
+        String(index),
+        getField(formData, `skinfold_${index}`).trim()
+      ])
+    ),
+    diameters: Object.fromEntries(
+      Array.from({ length: 3 }, (_, index) => [
+        String(index),
+        getField(formData, `diameter_${index}`).trim()
+      ])
+    ),
+    composition: Object.fromEntries(
+      Array.from({ length: 10 }, (_, index) => [
+        String(index),
+        getField(formData, `composition_${index}`).trim()
+      ])
+    )
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.patientProfile.upsert({
+      where: { userId },
+      update: {
+        notes: JSON.stringify({
+          ...parseClinicalNotesJson(existingProfile?.notes),
+          anthropometry
+        })
+      },
+      create: {
+        userId,
+        patientCode: await generatePatientCode(tx),
+        notes: JSON.stringify({ anthropometry })
+      }
+    });
+  });
+
+  revalidatePath("/admin/clinical-history");
+  redirect(`/admin/clinical-history?patientId=${encodeURIComponent(userId)}&page=3&success=Antropometria%20guardada.`);
+}
+
 export async function saveClinicalPatientSummaryAction(formData: FormData) {
   await requireRole(UserRole.ADMIN);
 

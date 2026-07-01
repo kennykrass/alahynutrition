@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 
 import {
   createClinicalDemoPatientAction,
+  saveClinicalAnthropometryAction,
   saveClinicalFoodRecallAction,
   saveClinicalHistoryAction,
   saveClinicalPatientSummaryAction
@@ -51,6 +52,13 @@ type ClinicalNotes = {
       unit: string;
     }>
   >;
+  anthropometry: {
+    date: string;
+    circumferences: Record<string, { previous: string; current: string }>;
+    skinfolds: Record<string, string>;
+    diameters: Record<string, string>;
+    composition: Record<string, string>;
+  };
 };
 
 const clinicalPageNumbers = [1, 2, 3, 4, 5, 6];
@@ -136,6 +144,18 @@ function formatDateInput(value?: Date | null) {
   return value ? value.toISOString().slice(0, 10) : "";
 }
 
+function getMeasurementDifference(previous: string, current: string) {
+  const previousValue = Number(previous);
+  const currentValue = Number(current);
+
+  if (!previous.trim() || !current.trim() || !Number.isFinite(previousValue) || !Number.isFinite(currentValue)) {
+    return "";
+  }
+
+  const difference = currentValue - previousValue;
+  return difference > 0 ? `+${difference.toFixed(1)}` : difference.toFixed(1);
+}
+
 function EditableCell({
   name,
   defaultValue,
@@ -165,7 +185,14 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
     comments: notes ?? "",
     familyHistory: {},
     gynecological: {},
-    foodRecall: {}
+    foodRecall: {},
+    anthropometry: {
+      date: "",
+      circumferences: {},
+      skinfolds: {},
+      diameters: {},
+      composition: {}
+    }
   };
 
   if (!notes) {
@@ -184,7 +211,14 @@ function parseClinicalNotes(notes?: string | null): ClinicalNotes {
       comments: parsed.comments ?? "",
       familyHistory: parsed.familyHistory ?? {},
       gynecological: parsed.gynecological ?? {},
-      foodRecall: parsed.foodRecall ?? {}
+      foodRecall: parsed.foodRecall ?? {},
+      anthropometry: parsed.anthropometry ?? {
+        date: "",
+        circumferences: {},
+        skinfolds: {},
+        diameters: {},
+        composition: {}
+      }
     };
   } catch {
     return fallback;
@@ -651,10 +685,18 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                 </section>
               </div>
             ) : selectedPage === 3 ? (
-              <div className="grid min-w-0">
+              <form action={saveClinicalAnthropometryAction} className="grid min-w-0">
+                <input name="userId" type="hidden" value={selectedPatient?.id ?? ""} />
                 <section className="min-w-0 border-b border-mist/15 px-6 py-6 lg:px-12">
-                  <div className="rounded-2xl bg-steel px-4 py-2 text-center text-sm font-bold uppercase tracking-wide text-white">
-                    Antropometria
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-steel px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+                    <span>Antropometria</span>
+                    <button
+                      className="rounded-xl bg-glow px-4 py-2 text-xs font-bold text-ink shadow-glow transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!selectedPatient}
+                      type="submit"
+                    >
+                      Guardar antropometria
+                    </button>
                   </div>
 
                   <div className="mt-5">
@@ -662,9 +704,12 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                       <h2 className="border-b-2 border-glow/60 pb-1 text-lg uppercase text-glow">
                         Circunferencias (cm)
                       </h2>
-                      <div className="rounded-t-xl border border-glow/20 bg-glow/10 px-3 py-2 text-center text-sm font-semibold text-glow">
-                        11/03/2022
-                      </div>
+                      <input
+                        className="rounded-t-xl border border-glow/20 bg-glow/10 px-3 py-2 text-center text-sm font-semibold text-glow outline-none focus:border-glow"
+                        defaultValue={clinicalNotes.anthropometry.date || "2022-03-11"}
+                        name="anthropometryDate"
+                        type="date"
+                      />
                     </div>
                     <div className="mt-2 grid grid-cols-[1fr_4rem_4rem_4rem] text-center text-xs uppercase tracking-wide text-[color:var(--text-soft)]">
                       <span />
@@ -673,19 +718,35 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                       <span>Dif.</span>
                     </div>
                     <div className="mt-1 overflow-hidden rounded-xl border border-mist/10">
-                      {circumferenceRows.map(([label, value], index) => (
-                        <div
-                          className={`grid grid-cols-[1fr_4rem_4rem_4rem] text-sm ${
-                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
-                          }`}
-                          key={label}
-                        >
-                          <span className="px-3 py-2 font-medium">{label}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center text-[color:var(--text-soft)]" />
-                          <span className="border-l border-mist/10 px-2 py-2 text-center text-white">{value}</span>
-                          <span className="border-l border-mist/10 px-2 py-2 text-center text-[color:var(--text-soft)]" />
-                        </div>
-                      ))}
+                      {circumferenceRows.map(([label, value], index) => {
+                        const measurement = clinicalNotes.anthropometry.circumferences[String(index)];
+                        const previous = measurement?.previous ?? "";
+                        const current = measurement?.current ?? value;
+
+                        return (
+                          <div
+                            className={`grid grid-cols-[1fr_4rem_4rem_4rem] text-sm ${
+                              index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                            }`}
+                            key={label}
+                          >
+                            <span className="px-3 py-2 font-medium">{label}</span>
+                            <input
+                              className="min-w-0 border-l border-mist/10 bg-transparent px-2 py-2 text-center text-white outline-none focus:bg-glow/10"
+                              defaultValue={previous}
+                              name={`circumference_${index}_previous`}
+                            />
+                            <input
+                              className="min-w-0 border-l border-mist/10 bg-transparent px-2 py-2 text-center text-white outline-none focus:bg-glow/10"
+                              defaultValue={current}
+                              name={`circumference_${index}_current`}
+                            />
+                            <span className="border-l border-mist/10 px-2 py-2 text-center text-[color:var(--text-soft)]">
+                              {getMeasurementDifference(previous, current)}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -702,7 +763,11 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           key={row}
                         >
                           <span className="px-3 py-2 font-medium">{row}</span>
-                          <span className="border-l border-mist/10" />
+                          <input
+                            className="min-w-0 border-l border-mist/10 bg-transparent px-3 py-2 text-center text-white outline-none focus:bg-glow/10"
+                            defaultValue={clinicalNotes.anthropometry.skinfolds[String(index)] ?? ""}
+                            name={`skinfold_${index}`}
+                          />
                         </div>
                       ))}
                     </div>
@@ -721,7 +786,11 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                           key={row}
                         >
                           <span className="px-3 py-2 font-medium">{row}</span>
-                          <span className="border-l border-mist/10" />
+                          <input
+                            className="min-w-0 border-l border-mist/10 bg-transparent px-3 py-2 text-center text-white outline-none focus:bg-glow/10"
+                            defaultValue={clinicalNotes.anthropometry.diameters[String(index)] ?? ""}
+                            name={`diameter_${index}`}
+                          />
                         </div>
                       ))}
                     </div>
@@ -759,10 +828,13 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                         <div className="grid gap-2">
                           {compositionRows.map((row, index) => (
                             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(7rem,8.5rem)] items-center gap-3 text-sm" key={`${row.label}-${index}`}>
-                              <span className="min-w-0 break-words text-right font-semibold uppercase text-white">{row.label}</span>
-                              <span className="min-h-10 rounded-xl border border-mist/10 bg-white/5 px-3 py-2 text-center text-[color:var(--text-soft)]">
-                                {row.value}
-                              </span>
+                              <label className="min-w-0 break-words text-right font-semibold uppercase text-white" htmlFor={`composition_${index}`}>{row.label}</label>
+                              <input
+                                className="min-h-10 min-w-0 rounded-xl border border-mist/10 bg-white/5 px-3 py-2 text-center text-white outline-none focus:border-glow"
+                                defaultValue={clinicalNotes.anthropometry.composition[String(index)] ?? row.value}
+                                id={`composition_${index}`}
+                                name={`composition_${index}`}
+                              />
                             </div>
                           ))}
                         </div>
@@ -789,7 +861,7 @@ export default async function ClinicalHistoryPage({ searchParams }: ClinicalHist
                     </div>
                   </div>
                 </section>
-              </div>
+              </form>
             ) : selectedPage === 4 ? (
               <div className="grid lg:grid-cols-[1fr_1.22fr]">
                 <section className="border-b border-mist/15 px-6 py-6 lg:border-b-0 lg:border-r lg:px-12">
